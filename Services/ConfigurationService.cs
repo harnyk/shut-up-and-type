@@ -15,6 +15,14 @@ namespace DotNetWhisper.Services
 
         public string? GetApiKey() => _apiKey;
 
+        public string? OpenAIApiKey => _apiKey;
+
+        public void SaveApiKey(string apiKey)
+        {
+            _apiKey = apiKey;
+            SaveConfiguration();
+        }
+
         private string? FindConfigFile()
         {
             var configPaths = new List<string>
@@ -71,6 +79,31 @@ namespace DotNetWhisper.Services
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Config error: {ex.Message}", ex);
+            }
+        }
+
+        private void SaveConfiguration()
+        {
+            try
+            {
+                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WhisperRecorder");
+                Directory.CreateDirectory(appDataPath);
+
+                var configPath = Path.Combine(appDataPath, "config.json");
+                var config = new
+                {
+                    OpenAI = new
+                    {
+                        ApiKey = _apiKey ?? "your-openai-api-key-here"
+                    }
+                };
+
+                string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(configPath, json);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not save config: {ex.Message}", ex);
             }
         }
 

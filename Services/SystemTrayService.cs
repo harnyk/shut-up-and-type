@@ -8,6 +8,7 @@ namespace DotNetWhisper.Services
 
         public event EventHandler? ShowRequested;
         public event EventHandler? ExitRequested;
+        public event EventHandler? SettingsRequested;
 
         public void Initialize()
         {
@@ -18,6 +19,8 @@ namespace DotNetWhisper.Services
 
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Show", null, (s, e) => ShowRequested?.Invoke(this, EventArgs.Empty));
+            contextMenu.Items.Add("Settings", null, (s, e) => SettingsRequested?.Invoke(this, EventArgs.Empty));
+            contextMenu.Items.Add("-");
             contextMenu.Items.Add("Exit", null, (s, e) => ExitRequested?.Invoke(this, EventArgs.Empty));
             _trayIcon.ContextMenuStrip = contextMenu;
 

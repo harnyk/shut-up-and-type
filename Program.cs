@@ -65,6 +65,7 @@ namespace DotNetWhisper
             _systemTrayService.Initialize();
             _systemTrayService.ShowRequested += (s, e) => ShowWindow();
             _systemTrayService.ExitRequested += (s, e) => Application.Exit();
+            _systemTrayService.SettingsRequested += (s, e) => ShowSettings();
 
             _audioRecordingService.RecordingCompleted += OnRecordingCompleted;
         }
@@ -79,6 +80,15 @@ namespace DotNetWhisper
         private void HideWindow()
         {
             Hide();
+        }
+
+        private void ShowSettings()
+        {
+            var settingsForm = new Services.SettingsForm(_configurationService);
+            if (settingsForm.ShowDialog() == DialogResult.OK)
+            {
+                ValidateApiKey();
+            }
         }
 
         private async void OnRecordingCompleted(object? sender, string audioFilePath)
