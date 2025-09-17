@@ -1,0 +1,55 @@
+# Build results
+bin/
+obj/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# VS Code
+.vscode/
+
+# JetBrains Rider
+.idea/
+
+# Config files (contains API keys)
+config.json
+
+# Audio recordings
+*.wav
+
+# Packages
+*.nupkg
+*.snupkg
+
+# NuGet
+packages/
+.nuget/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log

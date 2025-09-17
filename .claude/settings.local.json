@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet new:*)",
+      "Bash(dotnet build)",
+      "Bash(dir)",
+      "Bash(winget search:*)",
+      "Bash(winget install:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dotnet add package NAudio)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet remove:*)",
+      "Bash(dir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
