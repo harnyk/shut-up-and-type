@@ -13,7 +13,7 @@ namespace DotNetWhisper.Services
         {
             _trayIcon = new NotifyIcon();
             _trayIcon.Text = "Whisper Recorder";
-            _trayIcon.Icon = SystemIcons.Application;
+            _trayIcon.Icon = IconService.CreateMicrophoneIconFromICO();
             _trayIcon.Visible = true;
 
             var contextMenu = new ContextMenuStrip();
