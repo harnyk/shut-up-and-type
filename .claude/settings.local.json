@@ -10,7 +10,9 @@
       "Bash(dotnet add package NAudio)",
       "Bash(dotnet add package:*)",
       "Bash(dotnet remove:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)"
     ],
     "deny": [],
     "ask": []
