@@ -18,7 +18,7 @@ namespace DotNetWhisper
         private static MainForm? _instance;
 
         private Label statusLabel = null!;
-        private TextBox transcriptionBox = null!;
+        private NotifyIcon trayIcon = null!;
         private WaveInEvent? waveIn;
         private WaveFileWriter? waveWriter;
         private string? currentRecordingFile;
@@ -55,7 +55,36 @@ namespace DotNetWhisper
         {
             InitializeComponent();
             _instance = this;
+            SetupTrayIcon();
             LoadConfiguration();
+            ValidateApiKey();
+        }
+
+        private void SetupTrayIcon()
+        {
+            trayIcon = new NotifyIcon();
+            trayIcon.Text = "Whisper Recorder";
+            trayIcon.Icon = SystemIcons.Application;
+            trayIcon.Visible = true;
+
+            var contextMenu = new ContextMenuStrip();
+            contextMenu.Items.Add("Show", null, (s, e) => ShowWindow());
+            contextMenu.Items.Add("Exit", null, (s, e) => Application.Exit());
+            trayIcon.ContextMenuStrip = contextMenu;
+
+            trayIcon.DoubleClick += (s, e) => ShowWindow();
+        }
+
+        private void ShowWindow()
+        {
+            Show();
+            WindowState = FormWindowState.Normal;
+            BringToFront();
+        }
+
+        private void HideWindow()
+        {
+            Hide();
         }
 
         private string? FindConfigFile()
@@ -113,7 +142,24 @@ namespace DotNetWhisper
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading config: {ex.Message}", "Config Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                statusLabel.Text = $"Config error: {ex.Message}";
+                statusLabel.ForeColor = Color.Red;
+            }
+        }
+
+        private void ValidateApiKey()
+        {
+            if (string.IsNullOrEmpty(apiKey) || apiKey == "your-openai-api-key-here")
+            {
+                statusLabel.Text = "No API key configured";
+                statusLabel.ForeColor = Color.Red;
+                ShowWindow(); // Show window if no API key
+            }
+            else
+            {
+                statusLabel.Text = "Ready - Press SCRLK to record";
+                statusLabel.ForeColor = Color.Green;
+                HideWindow(); // Hide if everything is OK
             }
         }
 
@@ -136,8 +182,8 @@ namespace DotNetWhisper
                 string json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(configPath, json);
 
-                MessageBox.Show($"Created default config at:\n{configPath}\n\nPlease edit this file and add your OpenAI API key.",
-                    "Config Created", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                statusLabel.Text = "Config created - Add API key";
+                statusLabel.ForeColor = Color.Orange;
             }
             catch (Exception ex)
             {
@@ -148,55 +194,39 @@ namespace DotNetWhisper
         private void InitializeComponent()
         {
             this.statusLabel = new Label();
-            this.transcriptionBox = new TextBox();
             this.SuspendLayout();
-
-            // Get screen dimensions for quarter screen size
-            var screenWidth = Screen.PrimaryScreen?.Bounds.Width ?? 800;
-            var screenHeight = Screen.PrimaryScreen?.Bounds.Height ?? 600;
-            var windowWidth = screenWidth / 2;
-            var windowHeight = screenHeight / 2;
 
             // statusLabel
             this.statusLabel.AutoSize = false;
-            this.statusLabel.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+            this.statusLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
             this.statusLabel.Location = new Point(10, 10);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new Size(windowWidth - 20, 30);
+            this.statusLabel.Size = new Size(280, 40);
             this.statusLabel.TabIndex = 0;
-            this.statusLabel.Text = "Press SCRLK to start recording";
+            this.statusLabel.Text = "Loading...";
             this.statusLabel.TextAlign = ContentAlignment.MiddleCenter;
-
-            // transcriptionBox
-            this.transcriptionBox.Location = new Point(10, 50);
-            this.transcriptionBox.Multiline = true;
-            this.transcriptionBox.Name = "transcriptionBox";
-            this.transcriptionBox.ReadOnly = true;
-            this.transcriptionBox.ScrollBars = ScrollBars.Vertical;
-            this.transcriptionBox.Size = new Size(windowWidth - 20, windowHeight - 80);
-            this.transcriptionBox.TabIndex = 1;
-            this.transcriptionBox.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
 
             // MainForm
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new Size(windowWidth, windowHeight);
+            this.ClientSize = new Size(300, 60);
             this.Controls.Add(this.statusLabel);
-            this.Controls.Add(this.transcriptionBox);
-            this.FormBorderStyle = FormBorderStyle.Sizable;
-            this.MinimizeBox = true;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MinimizeBox = false;
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = "Whisper Recorder";
             this.TopMost = true;
+            this.ShowInTaskbar = false;
+            this.WindowState = FormWindowState.Minimized;
             this.ResumeLayout(false);
-            this.PerformLayout();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             StopRecording();
+            trayIcon.Dispose();
             httpClient.Dispose();
             if (_hookID != IntPtr.Zero)
             {
@@ -300,13 +330,21 @@ namespace DotNetWhisper
         {
             if (string.IsNullOrEmpty(apiKey))
             {
-                Invoke(() => transcriptionBox.Text = "Error: API key not configured in config.json");
+                Invoke(() =>
+                {
+                    statusLabel.Text = "No API key configured";
+                    statusLabel.ForeColor = Color.Red;
+                });
                 return;
             }
 
             try
             {
-                Invoke(() => transcriptionBox.Text = "Transcribing...");
+                Invoke(() =>
+                {
+                    statusLabel.Text = "Transcribing...";
+                    statusLabel.ForeColor = Color.Blue;
+                });
 
                 byte[] fileBytes = File.ReadAllBytes(audioFilePath);
 
@@ -328,14 +366,25 @@ namespace DotNetWhisper
                     var result = await response.Content.ReadAsStringAsync();
                     Invoke(() =>
                     {
-                        transcriptionBox.Text = result;
+                        statusLabel.Text = "Transcription successful";
+                        statusLabel.ForeColor = Color.Green;
                         TypeTextViaClipboard(result);
+
+                        // Hide window after 2 seconds
+                        var hideTimer = new System.Windows.Forms.Timer();
+                        hideTimer.Interval = 2000;
+                        hideTimer.Tick += (s, e) => { HideWindow(); hideTimer.Stop(); hideTimer.Dispose(); };
+                        hideTimer.Start();
                     });
                 }
                 else
                 {
                     var error = await response.Content.ReadAsStringAsync();
-                    Invoke(() => transcriptionBox.Text = $"Error: {response.StatusCode}\n{error}");
+                    Invoke(() =>
+                    {
+                        statusLabel.Text = $"API Error: {response.StatusCode}";
+                        statusLabel.ForeColor = Color.Red;
+                    });
                 }
 
                 // Delete the audio file after transcription
@@ -346,14 +395,18 @@ namespace DotNetWhisper
                         File.Delete(audioFilePath);
                     }
                 }
-                catch (Exception deleteEx)
+                catch
                 {
-                    Invoke(() => transcriptionBox.Text += $"\nWarning: Could not delete file - {deleteEx.Message}");
+                    // Just log silently, don't show error for file deletion
                 }
             }
             catch (Exception ex)
             {
-                Invoke(() => transcriptionBox.Text = $"Error transcribing audio: {ex.Message}");
+                Invoke(() =>
+                {
+                    statusLabel.Text = $"Error: {ex.Message}";
+                    statusLabel.ForeColor = Color.Red;
+                });
             }
         }
 
@@ -395,12 +448,15 @@ namespace DotNetWhisper
 
                         if (_isRecording)
                         {
-                            _instance.statusLabel.Text = "Recording";
+                            _instance.statusLabel.Text = "Recording...";
+                            _instance.statusLabel.ForeColor = Color.Red;
+                            _instance.ShowWindow();
                             _instance.StartRecording();
                         }
                         else
                         {
-                            _instance.statusLabel.Text = "Press SCRLK to start recording";
+                            _instance.statusLabel.Text = "Processing...";
+                            _instance.statusLabel.ForeColor = Color.Orange;
                             var recordingFile = _instance.currentRecordingFile;
                             _instance.StopRecording();
 
@@ -416,7 +472,8 @@ namespace DotNetWhisper
                                     {
                                         _instance.Invoke(() =>
                                         {
-                                            _instance.transcriptionBox.Text = $"Transcription error: {ex.Message}";
+                                            _instance.statusLabel.Text = $"Error: {ex.Message}";
+                                            _instance.statusLabel.ForeColor = Color.Red;
                                         });
                                     }
                                 });
