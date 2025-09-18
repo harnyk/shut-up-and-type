@@ -19,10 +19,10 @@ Write-Host "`n1. Cleaning previous builds..." -ForegroundColor Yellow
 Set-Location $solutionDir
 dotnet clean --configuration $Configuration
 
-# Step 2: Publish self-contained application
-Write-Host "`n2. Publishing self-contained application..." -ForegroundColor Yellow
+# Step 2: Publish framework-dependent application
+Write-Host "`n2. Publishing framework-dependent application..." -ForegroundColor Yellow
 $publishDir = "bin\$Configuration\net8.0-windows\win-x64\publish"
-dotnet publish --configuration $Configuration --runtime win-x64 --self-contained true --output $publishDir
+dotnet publish --configuration $Configuration --runtime win-x64 --self-contained false --output $publishDir
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to publish application"

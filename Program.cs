@@ -9,7 +9,7 @@ namespace ShutUpAndType
     public partial class MainForm : Form
     {
         private const int WH_KEYBOARD_LL = 13;
-        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_KEYUP = 0x0101;
         private const int VK_SCROLL = 0x91; // Scroll Lock key
 
         private static LowLevelKeyboardProc _proc = HookCallback;
@@ -17,6 +17,7 @@ namespace ShutUpAndType
         private static bool _isRecording = false;
         private static MainForm? _instance;
         private static IntPtr _previousActiveWindow = IntPtr.Zero;
+        private static string? _logDirectory;
 
         private Label statusLabel = null!;
         private readonly IConfigurationService _configurationService;
@@ -145,11 +146,46 @@ namespace ShutUpAndType
             }
             catch (Exception ex)
             {
+                LogError("Transcription failed", ex);
                 Invoke(() =>
                 {
                     statusLabel.Text = $"Error: {ex.Message}";
                     statusLabel.ForeColor = Color.Red;
                 });
+            }
+        }
+
+        private static void InitializeLogging()
+        {
+            try
+            {
+                _logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ShutUpAndType", "logs");
+                Directory.CreateDirectory(_logDirectory);
+            }
+            catch
+            {
+                _logDirectory = null;
+            }
+        }
+
+        private static void LogError(string message, Exception? ex = null)
+        {
+            if (_logDirectory == null) return;
+
+            try
+            {
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string logEntry = $"{timestamp} - {message}";
+                if (ex != null)
+                    logEntry += $"\nException: {ex}";
+                logEntry += "\n";
+
+                string logFile = Path.Combine(_logDirectory, $"shutupandtype-{DateTime.Now:yyyy-MM-dd}.log");
+                File.AppendAllText(logFile, logEntry);
+            }
+            catch
+            {
+                // Ignore logging errors
             }
         }
 
@@ -172,6 +208,7 @@ namespace ShutUpAndType
             }
             catch (Exception ex)
             {
+                LogError("Configuration error", ex);
                 statusLabel.Text = $"Config error: {ex.Message}";
                 statusLabel.ForeColor = Color.Red;
                 ShowWindow();
@@ -242,6 +279,8 @@ namespace ShutUpAndType
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            InitializeLogging();
+
             // Setup dependency injection
             var configurationService = new ConfigurationService();
             var audioRecordingService = new AudioRecordingService();
@@ -276,7 +315,7 @@ namespace ShutUpAndType
 
         private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN)
+            if (nCode >= 0 && wParam == (IntPtr)WM_KEYUP)
             {
                 int vkCode = Marshal.ReadInt32(lParam);
 
@@ -284,6 +323,10 @@ namespace ShutUpAndType
                 {
                     _instance.Invoke(new Action(() =>
                     {
+                        // Ignore Scroll Lock presses while transcribing
+                        if (_instance.statusLabel.Text == "Transcribing...")
+                            return;
+
                         _isRecording = !_isRecording;
 
                         if (_isRecording)

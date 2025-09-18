@@ -33,7 +33,7 @@ jobs:
     - name: Update project version
       run: |
         $version = "${{ env.VERSION }}"
-        $csprojPath = "dotnet-whisper.csproj"
+        $csprojPath = "ShutUpAndType.csproj"
         $content = Get-Content $csprojPath -Raw
         $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
         $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version</FileVersion>"
@@ -49,8 +49,8 @@ jobs:
 
     - name: Verify build output
       run: |
-        if (Test-Path "bin\Release\WhisperVoiceRecorder-Portable.zip") {
-          $size = [math]::Round((Get-Item "bin\Release\WhisperVoiceRecorder-Portable.zip").Length / 1MB, 2)
+        if (Test-Path "bin\Release\ShutUpAndType-Portable.zip") {
+          $size = [math]::Round((Get-Item "bin\Release\ShutUpAndType-Portable.zip").Length / 1MB, 2)
           echo "✅ Build successful! ZIP size: ${size}MB"
         } else {
           echo "❌ Build failed - ZIP not found"
@@ -79,7 +79,7 @@ jobs:
 
           ### Installation
           1. Download `ShutUpAndType-Portable.zip`
-          2. Extract and run `dotnet-whisper.exe`
+          2. Extract and run `ShutUpAndType.exe`
           3. Configure your OpenAI API key in settings
           4. Press Scroll Lock to start recording!
 

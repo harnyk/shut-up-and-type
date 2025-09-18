@@ -45,7 +45,16 @@ namespace ShutUpAndType.Services
         public static Icon CreateMicrophoneIconFromICO()
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("dotnet_whisper.microphone.ico");
+            var resourceNames = assembly.GetManifestResourceNames();
+
+            // Search for any resource ending with .microphone.ico (case-insensitive)
+            var microphoneResource = resourceNames.FirstOrDefault(name =>
+                name.EndsWith(".microphone.ico", StringComparison.OrdinalIgnoreCase));
+
+            if (microphoneResource == null)
+                throw new FileNotFoundException("Embedded microphone.ico not found");
+
+            using var stream = assembly.GetManifestResourceStream(microphoneResource);
             if (stream == null)
                 throw new FileNotFoundException("Embedded microphone.ico not found");
             return new Icon(stream);

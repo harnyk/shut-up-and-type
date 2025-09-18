@@ -18,13 +18,17 @@ namespace ShutUpAndType.Services
         {
             try
             {
+                // Ensure ShutUpAndType directory exists in temp
+                string tempDir = Path.Combine(Path.GetTempPath(), "ShutUpAndType");
+                Directory.CreateDirectory(tempDir);
+
                 // Generate timestamp-based filename
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                _currentRecordingFile = $"{timestamp}-recording.wav";
+                _currentRecordingFile = Path.Combine(tempDir, $"{timestamp}-recording.wav");
 
-                // Initialize audio capture with lowest quality: 8kHz, 8-bit, mono
+                // Initialize audio capture with 16kHz, 16-bit, mono
                 _waveIn = new WaveInEvent();
-                _waveIn.WaveFormat = new WaveFormat(8000, 8, 1);
+                _waveIn.WaveFormat = new WaveFormat(16000, 16, 1);
 
                 // Initialize WAV writer
                 _waveWriter = new WaveFileWriter(_currentRecordingFile, _waveIn.WaveFormat);

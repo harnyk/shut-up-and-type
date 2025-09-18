@@ -13,40 +13,45 @@ namespace ShutUpAndType.Services
 
         public void TypeText(string text)
         {
-            // Сохраняем текущий буфер обмена
+            text = text.Trim('\r', '\n');
+
+            // Check if clipboard contains text before modifying it
+            bool hadText = false;
             string? originalClipboard = null;
             try
             {
-                if (Clipboard.ContainsText())
+                hadText = Clipboard.ContainsText();
+                if (hadText)
                     originalClipboard = Clipboard.GetText();
             }
-            catch { /* игнорируем ошибки доступа к буферу */ }
+            catch { /* ignore clipboard access errors */ }
 
             try
             {
-                // Копируем наш текст
+                // Set our text to clipboard
                 Clipboard.SetText(text);
-                Thread.Sleep(50); // Небольшая задержка
+                Thread.Sleep(50); // Small delay
 
-                // Имитируем Ctrl+V
+                // Simulate Ctrl+V
                 keybd_event(0x11, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero); // Ctrl down
                 keybd_event(0x56, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero); // V down
                 keybd_event(0x56, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);   // V up
                 keybd_event(0x11, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);   // Ctrl up
 
-                Thread.Sleep(100); // Ждем завершения вставки
+                Thread.Sleep(100); // Wait for paste completion
             }
             finally
             {
-                // Восстанавливаем оригинальный буфер
+                // Restore original clipboard only if it originally contained text
                 try
                 {
-                    if (originalClipboard != null)
+                    if (hadText && originalClipboard != null)
                         Clipboard.SetText(originalClipboard);
-                    else
+                    else if (!hadText)
                         Clipboard.Clear();
+                    // If clipboard had non-text data, leave it alone
                 }
-                catch { /* игнорируем ошибки */ }
+                catch { /* ignore errors */ }
             }
         }
     }

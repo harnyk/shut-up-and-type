@@ -13,7 +13,7 @@ namespace ShutUpAndType
 
         // Distribution and packaging
         public const string PORTABLE_PACKAGE_NAME = "ShutUpAndType-Portable";
-        public const string EXECUTABLE_NAME = "dotnet-whisper.exe";
+        public const string EXECUTABLE_NAME = "ShutUpAndType.exe";
 
         // UI text
         public const string MAIN_WINDOW_TITLE = APP_NAME;

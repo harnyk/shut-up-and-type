@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotnet-whisper", "dotnet-whisper.csproj", "{C5861761-F6B0-62BE-62F5-078972D69369}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShutUpAndType", "ShutUpAndType.csproj", "{C5861761-F6B0-62BE-62F5-078972D69369}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
