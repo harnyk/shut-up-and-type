@@ -56,3 +56,5 @@ packages/
 
 # Log files
 *.log
+
+repomix-output.xml
