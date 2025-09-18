@@ -1,0 +1,92 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+        echo "::set-output name=version::$version"
+      shell: powershell
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Update project version
+      run: |
+        $version = "${{ env.VERSION }}"
+        $csprojPath = "dotnet-whisper.csproj"
+        $content = Get-Content $csprojPath -Raw
+        $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
+        $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version</FileVersion>"
+        Set-Content $csprojPath $content
+        echo "Updated version to $version in $csprojPath"
+      shell: powershell
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build portable release
+      run: powershell -ExecutionPolicy Bypass -File "scripts\build-portable.ps1"
+
+    - name: Verify build output
+      run: |
+        if (Test-Path "bin\Release\WhisperVoiceRecorder-Portable.zip") {
+          $size = [math]::Round((Get-Item "bin\Release\WhisperVoiceRecorder-Portable.zip").Length / 1MB, 2)
+          echo "✅ Build successful! ZIP size: ${size}MB"
+        } else {
+          echo "❌ Build failed - ZIP not found"
+          exit 1
+        }
+      shell: powershell
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Whisper Voice Recorder ${{ steps.get_version.outputs.version }}
+        body: |
+          ## 🎤 Whisper Voice Recorder v${{ steps.get_version.outputs.version }}
+
+          ### Features
+          - Global voice recording with Scroll Lock hotkey
+          - Automatic transcription via OpenAI Whisper API
+          - System tray integration
+          - Self-contained portable executable
+
+          ### Requirements
+          - Windows 10/11 x64
+          - .NET 8.0 Runtime (if not already installed)
+          - OpenAI API key
+
+          ### Installation
+          1. Download `WhisperVoiceRecorder-Portable.zip`
+          2. Extract and run `dotnet-whisper.exe`
+          3. Configure your OpenAI API key in settings
+          4. Press Scroll Lock to start recording!
+
+          ### Changes
+          - Version updated to ${{ steps.get_version.outputs.version }}
+          - See commit history for detailed changes
+
+        files: |
+          bin/Release/WhisperVoiceRecorder-Portable.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
