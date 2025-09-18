@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public interface ISystemTrayService : IDisposable
     {

@@ -36,6 +36,9 @@ $RECYCLE.BIN/
 # Config files (contains API keys)
 config.json
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Audio recordings
 *.wav
 

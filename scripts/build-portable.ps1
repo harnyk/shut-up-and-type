@@ -1,4 +1,4 @@
-# Simple portable build script for Whisper Voice Recorder
+# Simple portable build script for ShutUpAndType
 
 param(
     [string]$Configuration = "Release"
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
 $solutionDir = Split-Path $scriptDir -Parent
 
-Write-Host "Building Whisper Voice Recorder portable version..." -ForegroundColor Green
+Write-Host "Building ShutUpAndType portable version..." -ForegroundColor Green
 Write-Host "Solution directory: $solutionDir" -ForegroundColor Gray
 
 # Step 1: Clean previous builds
@@ -31,8 +31,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # Step 3: Create portable package
 Write-Host "`n3. Creating portable package..." -ForegroundColor Yellow
-$packageDir = "bin\$Configuration\WhisperVoiceRecorder-Portable"
-$zipPath = "bin\$Configuration\WhisperVoiceRecorder-Portable.zip"
+$packageDir = "bin\$Configuration\ShutUpAndType-Portable"
+$zipPath = "bin\$Configuration\ShutUpAndType-Portable.zip"
 
 # Remove existing package
 if (Test-Path $packageDir) {
@@ -50,7 +50,7 @@ Copy-Item "$publishDir\dotnet-whisper.exe" $packageDir
 
 # Create README for portable version
 $readmeContent = @"
-# Whisper Voice Recorder - Portable Version
+# ShutUpAndType - Portable Version
 
 ## Quick Start
 1. Run dotnet-whisper.exe
@@ -61,7 +61,7 @@ $readmeContent = @"
 
 ## Configuration
 The application will create config.json in:
-%APPDATA%\WhisperRecorder\config.json
+%APPDATA%\ShutUpAndType\config.json
 
 ## Requirements
 - Windows 10/11

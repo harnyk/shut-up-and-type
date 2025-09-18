@@ -1,4 +1,4 @@
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public interface IKeyboardSimulationService
     {

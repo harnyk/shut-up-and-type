@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Reflection;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public static class IconService
     {

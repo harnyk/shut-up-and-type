@@ -1,6 +1,6 @@
 # Build Instructions
 
-This document describes how to build Whisper Voice Recorder for distribution.
+This document describes how to build ShutUpAndType for distribution.
 
 ## Quick Build - Portable Version ✅
 
@@ -11,7 +11,7 @@ powershell -ExecutionPolicy Bypass -File "scripts\build-portable.ps1"
 ```
 
 **Output**:
-- `bin\Release\WhisperVoiceRecorder-Portable.zip` (0.09MB)
+- `bin\Release\ShutUpAndType-Portable.zip` (0.09MB)
 - Contains `dotnet-whisper.exe` (0.16MB)
 - Requires .NET 8.0 Runtime on target machine
 

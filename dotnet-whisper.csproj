@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <RootNamespace>dotnet_whisper</RootNamespace>
+    <RootNamespace>ShutUpAndType</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
@@ -12,9 +12,9 @@
     <PublishSingleFile>true</PublishSingleFile>
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
-    <Product>Whisper Voice Recorder</Product>
-    <Company>DotNet Whisper</Company>
-    <Description>Voice recording with OpenAI Whisper transcription</Description>
+    <Product>ShutUpAndType</Product>
+    <Company>Mark Harnyk</Company>
+    <Description>Voice recording with automatic transcription</Description>
   </PropertyGroup>
 
   <ItemGroup>

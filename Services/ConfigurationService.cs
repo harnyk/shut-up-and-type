@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public class ConfigurationService : IConfigurationService
     {
@@ -27,11 +27,11 @@ namespace DotNetWhisper.Services
         {
             var configPaths = new List<string>
             {
-                // 1. AppData\Roaming\WhisperRecorder\config.json
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WhisperRecorder", "config.json"),
+                // 1. AppData\Roaming\AppConstants.CONFIG_FOLDER_NAME\config.json
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppConstants.CONFIG_FOLDER_NAME, AppConstants.CONFIG_FILE_NAME),
 
                 // 2. Рядом с исполняемым файлом
-                Path.Combine(AppContext.BaseDirectory, "config.json")
+                Path.Combine(AppContext.BaseDirectory, AppConstants.CONFIG_FILE_NAME)
             };
 
             // 3. В текущей директории и выше (как npm resolution)
@@ -41,7 +41,7 @@ namespace DotNetWhisper.Services
             // Ищем в текущей и до 5 директорий вверх
             for (int i = 0; i < 5 && searchDir != null; i++)
             {
-                var configPath = Path.Combine(searchDir.FullName, "config.json");
+                var configPath = Path.Combine(searchDir.FullName, AppConstants.CONFIG_FILE_NAME);
                 configPaths.Add(configPath);
                 searchDir = searchDir.Parent;
             }
@@ -86,10 +86,10 @@ namespace DotNetWhisper.Services
         {
             try
             {
-                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WhisperRecorder");
+                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppConstants.CONFIG_FOLDER_NAME);
                 Directory.CreateDirectory(appDataPath);
 
-                var configPath = Path.Combine(appDataPath, "config.json");
+                var configPath = Path.Combine(appDataPath, AppConstants.CONFIG_FILE_NAME);
                 var config = new
                 {
                     OpenAI = new
@@ -111,10 +111,10 @@ namespace DotNetWhisper.Services
         {
             try
             {
-                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WhisperRecorder");
+                var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppConstants.CONFIG_FOLDER_NAME);
                 Directory.CreateDirectory(appDataPath);
 
-                var configPath = Path.Combine(appDataPath, "config.json");
+                var configPath = Path.Combine(appDataPath, AppConstants.CONFIG_FILE_NAME);
                 var defaultConfig = new
                 {
                     OpenAI = new

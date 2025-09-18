@@ -1,4 +1,4 @@
-# Whisper Voice Recorder
+# ShutUpAndType
 
 🎤 A lightweight Windows voice recording application with automatic speech-to-text transcription using OpenAI Whisper API.
 
@@ -23,7 +23,7 @@
 ## Configuration
 
 The application searches for `config.json` in this order:
-1. `%APPDATA%\WhisperRecorder\config.json` (recommended)
+1. `%APPDATA%\ShutUpAndType\config.json` (recommended)
 2. Next to the executable file
 3. Current directory and up to 5 parent directories (npm-style resolution)
 

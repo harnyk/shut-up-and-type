@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public partial class SettingsForm : Form
     {
@@ -83,7 +83,7 @@ namespace DotNetWhisper.Services
             this.MinimizeBox = false;
             this.Name = "SettingsForm";
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "Whisper Recorder Settings";
+            this.Text = AppConstants.SETTINGS_WINDOW_TITLE;
             this.TopMost = true;
             this.ResumeLayout(false);
             this.PerformLayout();

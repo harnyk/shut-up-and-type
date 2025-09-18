@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public class KeyboardSimulationService : IKeyboardSimulationService
     {

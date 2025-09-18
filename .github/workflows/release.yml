@@ -62,9 +62,9 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
-        name: Whisper Voice Recorder ${{ steps.get_version.outputs.version }}
+        name: ShutUpAndType ${{ steps.get_version.outputs.version }}
         body: |
-          ## 🎤 Whisper Voice Recorder v${{ steps.get_version.outputs.version }}
+          ## 🎤 ShutUpAndType v${{ steps.get_version.outputs.version }}
 
           ### Features
           - Global voice recording with Scroll Lock hotkey
@@ -78,7 +78,7 @@ jobs:
           - OpenAI API key
 
           ### Installation
-          1. Download `WhisperVoiceRecorder-Portable.zip`
+          1. Download `ShutUpAndType-Portable.zip`
           2. Extract and run `dotnet-whisper.exe`
           3. Configure your OpenAI API key in settings
           4. Press Scroll Lock to start recording!
@@ -87,7 +87,7 @@ jobs:
           - Version updated to ${{ steps.get_version.outputs.version }}
           - See commit history for detailed changes
 
-        files: bin/Release/WhisperVoiceRecorder-Portable.zip
+        files: bin/Release/ShutUpAndType-Portable.zip
         draft: false
         prerelease: false
         fail_on_unmatched_files: true

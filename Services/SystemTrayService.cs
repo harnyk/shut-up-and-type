@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public class SystemTrayService : ISystemTrayService
     {
@@ -13,7 +13,7 @@ namespace DotNetWhisper.Services
         public void Initialize()
         {
             _trayIcon = new NotifyIcon();
-            _trayIcon.Text = "Whisper Recorder";
+            _trayIcon.Text = AppConstants.TRAY_TOOLTIP;
             _trayIcon.Icon = IconService.CreateMicrophoneIconFromICO();
             _trayIcon.Visible = true;
 

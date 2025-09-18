@@ -1,4 +1,4 @@
-namespace DotNetWhisper.Services
+namespace ShutUpAndType.Services
 {
     public class WhisperTranscriptionService : ITranscriptionService, IDisposable
     {

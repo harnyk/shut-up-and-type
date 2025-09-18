@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a .NET 8.0 Windows Forms application that provides global voice recording with OpenAI Whisper transcription. The architecture follows SOLID principles with dependency injection.
+This is ShutUpAndType, a .NET 8.0 Windows Forms application that provides global voice recording with OpenAI Whisper transcription. The architecture follows SOLID principles with dependency injection.
 
 ### Core Components
 

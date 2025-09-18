@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using NAudio.Wave;
-using DotNetWhisper.Services;
+using ShutUpAndType.Services;
 
-namespace DotNetWhisper
+namespace ShutUpAndType
 {
     public partial class MainForm : Form
     {
@@ -203,7 +203,7 @@ namespace DotNetWhisper
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "Whisper Recorder";
+            this.Text = AppConstants.MAIN_WINDOW_TITLE;
             this.TopMost = true;
             this.ShowInTaskbar = false;
             this.WindowState = FormWindowState.Minimized;
