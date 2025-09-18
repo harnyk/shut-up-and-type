@@ -46,14 +46,14 @@ if (Test-Path $zipPath) {
 New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 
 # Copy main executable
-Copy-Item "$publishDir\dotnet-whisper.exe" $packageDir
+Copy-Item "$publishDir\ShutUpAndType.exe" $packageDir
 
 # Create README for portable version
 $readmeContent = @"
 # ShutUpAndType - Portable Version
 
 ## Quick Start
-1. Run dotnet-whisper.exe
+1. Run ShutUpAndType.exe
 2. Right-click system tray icon -> Settings
 3. Enter your OpenAI API key
 4. Press Scroll Lock to record voice
@@ -83,7 +83,7 @@ Write-Host "`n✅ Build completed successfully!" -ForegroundColor Green
 Write-Host "Portable package created: $zipPath" -ForegroundColor Green
 
 # Show file sizes
-$exeFile = "$packageDir\dotnet-whisper.exe"
+$exeFile = "$packageDir\ShutUpAndType.exe"
 $zipFile = $zipPath
 
 if (Test-Path $exeFile) {
