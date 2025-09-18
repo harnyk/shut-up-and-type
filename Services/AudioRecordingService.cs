@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using System.Timers;
 
 namespace DotNetWhisper.Services
 {
@@ -7,6 +8,8 @@ namespace DotNetWhisper.Services
         private WaveInEvent? _waveIn;
         private WaveFileWriter? _waveWriter;
         private string? _currentRecordingFile;
+        private System.Timers.Timer? _recordingTimer;
+        private const int MAX_RECORDING_SECONDS = 60; // Максимум 60 секунд записи
 
         public event EventHandler<string>? RecordingCompleted;
         public bool IsRecording => _waveIn != null;
@@ -28,6 +31,12 @@ namespace DotNetWhisper.Services
 
                 _waveIn.DataAvailable += OnDataAvailable;
                 _waveIn.StartRecording();
+
+                // Запускаем таймер для автоматического завершения записи
+                _recordingTimer = new System.Timers.Timer(MAX_RECORDING_SECONDS * 1000);
+                _recordingTimer.Elapsed += OnRecordingTimeout;
+                _recordingTimer.AutoReset = false; // Срабатывает только один раз
+                _recordingTimer.Start();
             }
             catch (Exception ex)
             {
@@ -39,6 +48,11 @@ namespace DotNetWhisper.Services
         {
             try
             {
+                // Останавливаем таймер
+                _recordingTimer?.Stop();
+                _recordingTimer?.Dispose();
+                _recordingTimer = null;
+
                 var recordingFile = _currentRecordingFile;
 
                 _waveIn?.StopRecording();
@@ -70,8 +84,16 @@ namespace DotNetWhisper.Services
             }
         }
 
+        private void OnRecordingTimeout(object? sender, ElapsedEventArgs e)
+        {
+            // Автоматически останавливаем запись при таймауте
+            StopRecording();
+        }
+
         public void Dispose()
         {
+            _recordingTimer?.Stop();
+            _recordingTimer?.Dispose();
             _waveIn?.Dispose();
             _waveWriter?.Dispose();
         }

@@ -16,6 +16,7 @@ namespace DotNetWhisper
         private static IntPtr _hookID = IntPtr.Zero;
         private static bool _isRecording = false;
         private static MainForm? _instance;
+        private static IntPtr _previousActiveWindow = IntPtr.Zero;
 
         private Label statusLabel = null!;
         private readonly IConfigurationService _configurationService;
@@ -40,6 +41,12 @@ namespace DotNetWhisper
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         public MainForm(
             IConfigurationService configurationService,
@@ -77,6 +84,23 @@ namespace DotNetWhisper
             BringToFront();
         }
 
+        private void ShowWindowWithFocusPreservation()
+        {
+            // Сохраняем активное окно
+            _previousActiveWindow = GetForegroundWindow();
+
+            // Показываем наше окно
+            Show();
+            WindowState = FormWindowState.Normal;
+            BringToFront();
+
+            // Сразу возвращаем фокус предыдущему окну
+            if (_previousActiveWindow != IntPtr.Zero)
+            {
+                SetForegroundWindow(_previousActiveWindow);
+            }
+        }
+
         private void HideWindow()
         {
             Hide();
@@ -95,6 +119,9 @@ namespace DotNetWhisper
         {
             try
             {
+                // Сбрасываем флаг записи (важно для автоматического завершения по таймауту)
+                _isRecording = false;
+
                 Invoke(() =>
                 {
                     statusLabel.Text = "Transcribing...";
@@ -183,6 +210,19 @@ namespace DotNetWhisper
             this.ResumeLayout(false);
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // Если пользователь закрывает окно крестиком, сворачиваем в трей
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                HideWindow();
+                return;
+            }
+
+            base.OnFormClosing(e);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             _audioRecordingService.Dispose();
@@ -250,7 +290,7 @@ namespace DotNetWhisper
                         {
                             _instance.statusLabel.Text = "Recording...";
                             _instance.statusLabel.ForeColor = Color.Red;
-                            _instance.ShowWindow();
+                            _instance.ShowWindowWithFocusPreservation();
                             _instance._audioRecordingService.StartRecording();
                         }
                         else

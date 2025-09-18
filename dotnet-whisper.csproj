@@ -7,6 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <Product>Whisper Voice Recorder</Product>
+    <Company>DotNet Whisper</Company>
+    <Description>Voice recording with OpenAI Whisper transcription</Description>
   </PropertyGroup>
 
   <ItemGroup>

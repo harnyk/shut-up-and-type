@@ -16,7 +16,12 @@
       "WebFetch(domain:feathericons.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(magick:*)"
+      "Bash(magick:*)",
+      "Bash(wix:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(powershell:*)",
+      "Bash(\"bin\\Release\\WhisperVoiceRecorder-Portable\\dotnet-whisper.exe\")",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []
