@@ -19,7 +19,7 @@ jobs:
         $tag = "${{ github.ref_name }}"
         $version = $tag -replace '^v', ''
         echo "VERSION=$version" >> $env:GITHUB_ENV
-        echo "::set-output name=version::$version"
+        echo "version=$version" >> $env:GITHUB_OUTPUT
       shell: powershell
 
     - name: Setup .NET
@@ -56,7 +56,7 @@ jobs:
       shell: powershell
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
         name: Whisper Voice Recorder ${{ steps.get_version.outputs.version }}
@@ -84,9 +84,8 @@ jobs:
           - Version updated to ${{ steps.get_version.outputs.version }}
           - See commit history for detailed changes
 
-        files: |
-          bin/Release/WhisperVoiceRecorder-Portable.zip
+        files: bin/Release/WhisperVoiceRecorder-Portable.zip
         draft: false
         prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        fail_on_unmatched_files: true
+        generate_release_notes: false
