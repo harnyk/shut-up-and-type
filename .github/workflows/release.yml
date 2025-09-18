@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -38,7 +38,6 @@ jobs:
         $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
         $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version</FileVersion>"
         Set-Content $csprojPath $content
-        echo "Updated version to $version in $csprojPath"
       shell: powershell
 
     - name: Restore dependencies
@@ -58,6 +57,16 @@ jobs:
         }
       shell: powershell
 
+    - name: Install Inno Setup
+      run: choco install innosetup --no-progress -y
+      shell: powershell
+
+    - name: Build installer
+      run: |
+        $version = "${{ env.VERSION }}"
+        powershell -ExecutionPolicy Bypass -File "scripts\build-installer.ps1" -Version $version
+      shell: powershell
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
@@ -70,7 +79,7 @@ jobs:
           - Global voice recording with Scroll Lock hotkey
           - Automatic transcription via OpenAI Whisper API
           - System tray integration
-          - Self-contained portable executable
+          - Portable ZIP and Installer EXE
 
           ### Requirements
           - Windows 10/11 x64
@@ -78,16 +87,12 @@ jobs:
           - OpenAI API key
 
           ### Installation
-          1. Download `ShutUpAndType-Portable.zip`
-          2. Extract and run `ShutUpAndType.exe`
-          3. Configure your OpenAI API key in settings
-          4. Press Scroll Lock to start recording!
+          - **Portable**: Download `ShutUpAndType-Portable.zip`, extract and run `ShutUpAndType.exe`
+          - **Installer**: Download `ShutUpAndTypeSetup.exe` and run it
 
-          ### Changes
-          - Version updated to ${{ steps.get_version.outputs.version }}
-          - See commit history for detailed changes
-
-        files: bin/Release/ShutUpAndType-Portable.zip
+        files: |
+          bin/Release/ShutUpAndType-Portable.zip
+          installer/Output/ShutUpAndTypeSetup.exe
         draft: false
         prerelease: false
         fail_on_unmatched_files: true

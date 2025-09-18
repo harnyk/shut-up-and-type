@@ -58,3 +58,4 @@ packages/
 *.log
 
 repomix-output.xml
+installer/Output
