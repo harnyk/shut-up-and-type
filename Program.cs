@@ -176,9 +176,9 @@ namespace ShutUpAndType
                 statusLabel.ForeColor = Color.Green;
                 _keyboardSimulationService.TypeText(transcriptionResult);
 
-                // Hide window after 2 seconds and reset to idle
+                // Hide window after 1 second and reset to idle
                 var hideTimer = new System.Windows.Forms.Timer();
-                hideTimer.Interval = 2000;
+                hideTimer.Interval = 1000;
                 hideTimer.Tick += (s, e) =>
                 {
                     HideWindow();
@@ -391,6 +391,21 @@ namespace ShutUpAndType
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            // Single instance check using Mutex (per user)
+            const string mutexName = "ShutUpAndType_SingleInstance_Mutex";
+            using var mutex = new Mutex(true, mutexName, out bool isFirstInstance);
+
+            if (!isFirstInstance)
+            {
+                // Another instance is already running
+                MessageBox.Show(
+                    "ShutUpAndType is already running. Check the system tray.",
+                    "Already Running",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
 
             InitializeLogging();
 
