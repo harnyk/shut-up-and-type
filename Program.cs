@@ -164,6 +164,14 @@ namespace ShutUpAndType
         {
             try
             {
+                // Transition to completion state first to block Scroll Lock
+                if (!_applicationStateService.TryTransitionTo(ApplicationState.TranscriptionComplete))
+                {
+                    LogError("Failed to transition to TranscriptionComplete state");
+                    UpdateStatusForError("State transition error");
+                    return;
+                }
+
                 statusLabel.Text = "Transcription successful";
                 statusLabel.ForeColor = Color.Green;
                 _keyboardSimulationService.TypeText(transcriptionResult);
@@ -235,6 +243,9 @@ namespace ShutUpAndType
                 case ApplicationState.Transcribing:
                     statusLabel.Text = "Transcribing...";
                     statusLabel.ForeColor = Color.Blue;
+                    break;
+                case ApplicationState.TranscriptionComplete:
+                    // UI already updated in ProcessTranscriptionResult
                     break;
                 case ApplicationState.Error:
                     // Error message set elsewhere
@@ -459,9 +470,14 @@ namespace ShutUpAndType
             {
                 var currentState = _applicationStateService.CurrentState;
 
-                // Ignore keypresses during transcribing or error states
-                if (currentState == ApplicationState.Transcribing || currentState == ApplicationState.Error)
+                // Block Scroll Lock during transcribing, completion, or error states
+                if (currentState == ApplicationState.Transcribing ||
+                    currentState == ApplicationState.TranscriptionComplete ||
+                    currentState == ApplicationState.Error)
+                {
+                    LogError($"Scroll Lock ignored - current state: {currentState}");
                     return;
+                }
 
                 if (currentState == ApplicationState.Idle)
                 {

@@ -6,6 +6,7 @@ namespace ShutUpAndType.Services
         Recording,
         Processing,
         Transcribing,
+        TranscriptionComplete,
         Error
     }
 

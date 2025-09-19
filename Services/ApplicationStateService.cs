@@ -95,7 +95,8 @@ namespace ShutUpAndType.Services
                 (ApplicationState.Idle, ApplicationState.Recording) => true,
                 (ApplicationState.Recording, ApplicationState.Processing) => true,
                 (ApplicationState.Processing, ApplicationState.Transcribing) => true,
-                (ApplicationState.Transcribing, ApplicationState.Idle) => true,
+                (ApplicationState.Transcribing, ApplicationState.TranscriptionComplete) => true,
+                (ApplicationState.TranscriptionComplete, ApplicationState.Idle) => true,
                 (_, ApplicationState.Error) => true,
                 (ApplicationState.Error, ApplicationState.Idle) => true,
                 (ApplicationState.Recording, ApplicationState.Idle) => true, // Cancel recording
