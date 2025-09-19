@@ -30,16 +30,6 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Update project version
-      run: |
-        $version = "${{ env.VERSION }}"
-        $csprojPath = "ShutUpAndType.csproj"
-        $content = Get-Content $csprojPath -Raw
-        $content = $content -replace '<AssemblyVersion>.*</AssemblyVersion>', "<AssemblyVersion>$version</AssemblyVersion>"
-        $content = $content -replace '<FileVersion>.*</FileVersion>', "<FileVersion>$version</FileVersion>"
-        Set-Content $csprojPath $content
-      shell: powershell
-
     - name: Restore dependencies
       run: dotnet restore
 

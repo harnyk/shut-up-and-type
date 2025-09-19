@@ -63,3 +63,30 @@ The project includes an Inno Setup installer script:
 
 ### Constants
 Application constants are centralized in `Constants.cs` (AppConstants class) for branding, file names, and UI text.
+
+## Release Workflow
+
+### Versioning
+The project uses **Nerdbank.GitVersioning** for automatic version management:
+- Version automatically generated from Git history and tags
+- Base version defined in `version.json`
+- No manual version updates required in `.csproj`
+
+### Release Process
+1. **Development**: Make commits to `master` branch
+2. **Create Release Tag**:
+   ```bash
+   git tag v1.0.X
+   git push origin v1.0.X
+   ```
+3. **Automated CI**: GitHub Actions automatically:
+   - Builds portable ZIP and installer EXE
+   - Creates GitHub release with artifacts
+   - Version extracted from Git tag
+
+### GitHub Actions Workflow
+- **Trigger**: Push of version tags (`v*.*.*`)
+- **Output**:
+  - `ShutUpAndType-Portable.zip`
+  - `ShutUpAndTypeSetup.exe` (Inno Setup installer)
+- **No manual version updates** - GitVersioning handles all versioning
