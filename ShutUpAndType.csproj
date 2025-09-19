@@ -15,6 +15,7 @@
     <Product>ShutUpAndType</Product>
     <Company>Mark Harnyk</Company>
     <Description>Voice recording with automatic transcription</Description>
+    <ApplicationIcon>microphone.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

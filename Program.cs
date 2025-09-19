@@ -220,6 +220,9 @@ namespace ShutUpAndType
             this.statusLabel = new Label();
             this.SuspendLayout();
 
+            // Set the application icon
+            this.Icon = IconService.CreateMicrophoneIconFromICO();
+
             // statusLabel
             this.statusLabel.AutoSize = false;
             this.statusLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
