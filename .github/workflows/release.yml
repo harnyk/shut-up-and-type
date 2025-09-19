@@ -48,7 +48,7 @@ jobs:
       run: |
         if (Test-Path "assets\icons\source\microphone.svg") {
           echo "🎨 Generating icons from SVG source..."
-          powershell -ExecutionPolicy Bypass -File "scripts\generate-icons-local.bat"
+          cmd /c "scripts\generate-icons-local.bat"
           echo "✅ Icons generated successfully"
         } else {
           echo "⚠️ SVG source not found, using existing icons"
