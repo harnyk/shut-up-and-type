@@ -31,6 +31,13 @@ namespace ShutUpAndType.Services
                 form.Add(new StringContent("whisper-1"), "model");
                 form.Add(new StringContent("text"), "response_format");
 
+                // Add language parameter if not auto-detect
+                var languageCode = LanguageHelper.GetLanguageCode(_configurationService.Language);
+                if (languageCode != null)
+                {
+                    form.Add(new StringContent(languageCode), "language");
+                }
+
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 

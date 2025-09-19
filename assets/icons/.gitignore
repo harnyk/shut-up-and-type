@@ -1,0 +1,9 @@
+# Generated icon files - these are created by CI
+generated/
+ico/
+
+# Keep source files in version control
+!source/
+
+# Allow README files
+!README.md

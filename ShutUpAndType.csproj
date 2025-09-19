@@ -23,7 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Main application icon -->
     <EmbeddedResource Include="microphone.ico" />
+
+    <!-- System tray optimized icon (if available) -->
+    <EmbeddedResource Include="assets\icons\ico\microphone-tray.ico" Condition="Exists('assets\icons\ico\microphone-tray.ico')" />
   </ItemGroup>
 
 </Project>

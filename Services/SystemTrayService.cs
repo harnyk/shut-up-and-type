@@ -14,7 +14,7 @@ namespace ShutUpAndType.Services
         {
             _trayIcon = new NotifyIcon();
             _trayIcon.Text = AppConstants.TRAY_TOOLTIP;
-            _trayIcon.Icon = IconService.CreateMicrophoneIconFromICO();
+            _trayIcon.Icon = IconService.CreateSystemTrayIcon();
             _trayIcon.Visible = true;
 
             var contextMenu = new ContextMenuStrip();

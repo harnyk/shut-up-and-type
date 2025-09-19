@@ -9,8 +9,8 @@ namespace ShutUpAndType
     public partial class MainForm : Form
     {
         private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
         private const int WM_KEYUP = 0x0101;
-        private const int VK_SCROLL = 0x91; // Scroll Lock key
 
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static IntPtr _hookID = IntPtr.Zero;
@@ -229,7 +229,7 @@ namespace ShutUpAndType
             switch (state)
             {
                 case ApplicationState.Idle:
-                    statusLabel.Text = "Ready - Press SCRLK to record";
+                    statusLabel.Text = HotkeyHelper.GetStatusMessage(_configurationService.Hotkey);
                     statusLabel.ForeColor = Color.Green;
                     break;
                 case ApplicationState.Recording:
@@ -299,7 +299,7 @@ namespace ShutUpAndType
                 }
                 else
                 {
-                    statusLabel.Text = "Ready - Press SCRLK to record";
+                    statusLabel.Text = HotkeyHelper.GetStatusMessage(_configurationService.Hotkey);
                     statusLabel.ForeColor = Color.Green;
                     HideWindow(); // Hide if everything is OK
                 }
@@ -413,7 +413,7 @@ namespace ShutUpAndType
             {
                 // Setup dependency injection
                 var configurationService = new ConfigurationService();
-                var audioRecordingService = new AudioRecordingService();
+                var audioRecordingService = new AudioRecordingService(configurationService);
                 var transcriptionService = new WhisperTranscriptionService(configurationService);
                 var systemTrayService = new SystemTrayService();
                 var keyboardSimulationService = new KeyboardSimulationService();
@@ -459,19 +459,42 @@ namespace ShutUpAndType
 
         private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 && wParam == (IntPtr)WM_KEYUP)
+            if (nCode >= 0 && _instance != null)
             {
                 int vkCode = Marshal.ReadInt32(lParam);
+                int configuredVkCode = HotkeyHelper.GetVirtualKeyCode(_instance._configurationService.Hotkey);
 
-                if (vkCode == VK_SCROLL && _instance != null)
+                if (vkCode == configuredVkCode)
                 {
-                    try
+                    // Always suppress Caps Lock to prevent indicator light
+                    if (HotkeyHelper.ShouldSuppressKey(_instance._configurationService.Hotkey))
                     {
-                        _instance.BeginInvoke(new Action(() => _instance.HandleScrollLockPress()));
+                        // Handle our hotkey logic only on key up
+                        if (wParam == (IntPtr)WM_KEYUP)
+                        {
+                            try
+                            {
+                                _instance.BeginInvoke(new Action(() => _instance.HandleHotkeyPress()));
+                            }
+                            catch (Exception ex)
+                            {
+                                LogError("Error handling hotkey press", ex);
+                            }
+                        }
+                        return (IntPtr)1; // Suppress both key down and key up
                     }
-                    catch (Exception ex)
+
+                    // For other keys (like Scroll Lock), only handle key up
+                    if (wParam == (IntPtr)WM_KEYUP)
                     {
-                        LogError("Error handling scroll lock press", ex);
+                        try
+                        {
+                            _instance.BeginInvoke(new Action(() => _instance.HandleHotkeyPress()));
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError("Error handling hotkey press", ex);
+                        }
                     }
                 }
             }
@@ -479,18 +502,18 @@ namespace ShutUpAndType
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
 
-        private void HandleScrollLockPress()
+        private void HandleHotkeyPress()
         {
             try
             {
                 var currentState = _applicationStateService.CurrentState;
 
-                // Block Scroll Lock during transcribing, completion, or error states
+                // Block hotkey during transcribing, completion, or error states
                 if (currentState == ApplicationState.Transcribing ||
                     currentState == ApplicationState.TranscriptionComplete ||
                     currentState == ApplicationState.Error)
                 {
-                    LogError($"Scroll Lock ignored - current state: {currentState}");
+                    LogError($"Hotkey ignored - current state: {currentState}");
                     return;
                 }
 
@@ -532,7 +555,7 @@ namespace ShutUpAndType
             }
             catch (Exception ex)
             {
-                LogError("Error in HandleScrollLockPress", ex);
+                LogError("Error in HandleHotkeyPress", ex);
                 _applicationStateService.TryTransitionTo(ApplicationState.Error);
                 UpdateStatusForError("Internal error");
             }

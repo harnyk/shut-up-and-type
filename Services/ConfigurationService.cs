@@ -5,6 +5,10 @@ namespace ShutUpAndType.Services
     public class ConfigurationService : IConfigurationService
     {
         private string? _apiKey;
+        private HotkeyType _hotkey = AppConstants.DEFAULT_HOTKEY;
+        private WhisperLanguage _language = AppConstants.DEFAULT_LANGUAGE;
+        private RecordingTimeout _recordingTimeout = AppConstants.DEFAULT_RECORDING_TIMEOUT;
+        private string _configFilePath = "";
 
         public bool IsConfigured => !string.IsNullOrEmpty(_apiKey) && _apiKey != "your-openai-api-key-here";
 
@@ -15,10 +19,32 @@ namespace ShutUpAndType.Services
 
 
         public string? OpenAIApiKey => _apiKey;
+        public HotkeyType Hotkey => _hotkey;
+        public WhisperLanguage Language => _language;
+        public RecordingTimeout RecordingTimeout => _recordingTimeout;
+        public string ConfigFilePath => _configFilePath;
 
         public void SaveApiKey(string apiKey)
         {
             _apiKey = apiKey;
+            SaveConfiguration();
+        }
+
+        public void SaveHotkey(HotkeyType hotkey)
+        {
+            _hotkey = hotkey;
+            SaveConfiguration();
+        }
+
+        public void SaveLanguage(WhisperLanguage language)
+        {
+            _language = language;
+            SaveConfiguration();
+        }
+
+        public void SaveRecordingTimeout(RecordingTimeout timeout)
+        {
+            _recordingTimeout = timeout;
             SaveConfiguration();
         }
 
@@ -62,12 +88,37 @@ namespace ShutUpAndType.Services
                 var configPath = FindConfigFile();
                 if (configPath != null)
                 {
+                    _configFilePath = configPath;
                     string json = File.ReadAllText(configPath);
                     var config = JsonSerializer.Deserialize<JsonElement>(json);
                     if (config.TryGetProperty("OpenAI", out var openai) &&
                         openai.TryGetProperty("ApiKey", out var key))
                     {
                         _apiKey = key.GetString();
+                    }
+
+                    if (config.TryGetProperty("Hotkey", out var hotkeyElement))
+                    {
+                        if (Enum.TryParse<HotkeyType>(hotkeyElement.GetString(), out var parsedHotkey))
+                        {
+                            _hotkey = parsedHotkey;
+                        }
+                    }
+
+                    if (config.TryGetProperty("Language", out var languageElement))
+                    {
+                        if (Enum.TryParse<WhisperLanguage>(languageElement.GetString(), out var parsedLanguage))
+                        {
+                            _language = parsedLanguage;
+                        }
+                    }
+
+                    if (config.TryGetProperty("RecordingTimeout", out var timeoutElement))
+                    {
+                        if (Enum.TryParse<RecordingTimeout>(timeoutElement.GetString(), out var parsedTimeout))
+                        {
+                            _recordingTimeout = parsedTimeout;
+                        }
                     }
                 }
                 else
@@ -94,7 +145,10 @@ namespace ShutUpAndType.Services
                     OpenAI = new
                     {
                         ApiKey = _apiKey ?? "your-openai-api-key-here"
-                    }
+                    },
+                    Hotkey = _hotkey.ToString(),
+                    Language = _language.ToString(),
+                    RecordingTimeout = _recordingTimeout.ToString()
                 };
 
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
@@ -114,12 +168,16 @@ namespace ShutUpAndType.Services
                 Directory.CreateDirectory(appDataPath);
 
                 var configPath = Path.Combine(appDataPath, AppConstants.CONFIG_FILE_NAME);
+                _configFilePath = configPath;
                 var defaultConfig = new
                 {
                     OpenAI = new
                     {
                         ApiKey = "your-openai-api-key-here"
-                    }
+                    },
+                    Hotkey = AppConstants.DEFAULT_HOTKEY.ToString(),
+                    Language = AppConstants.DEFAULT_LANGUAGE.ToString(),
+                    RecordingTimeout = AppConstants.DEFAULT_RECORDING_TIMEOUT.ToString()
                 };
 
                 string json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions { WriteIndented = true });
