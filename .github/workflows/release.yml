@@ -40,6 +40,21 @@ jobs:
         Set-Content $csprojPath $content
       shell: powershell
 
+    - name: Install ImageMagick
+      run: choco install imagemagick --no-progress -y
+      shell: powershell
+
+    - name: Generate icons from SVG
+      run: |
+        if (Test-Path "assets\icons\source\microphone.svg") {
+          echo "🎨 Generating icons from SVG source..."
+          powershell -ExecutionPolicy Bypass -File "scripts\generate-icons-local.bat"
+          echo "✅ Icons generated successfully"
+        } else {
+          echo "⚠️ SVG source not found, using existing icons"
+        }
+      shell: powershell
+
     - name: Restore dependencies
       run: dotnet restore
 
