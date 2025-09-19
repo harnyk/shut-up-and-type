@@ -53,8 +53,8 @@ The application searches for `config.json` in this order:
 ## Building from Source
 
 ```bash
-git clone https://github.com/yourusername/dotnet-whisper.git
-cd dotnet-whisper
+git clone https://github.com/harnyk/shut-up-and-type.git
+cd shut-up-and-type
 dotnet build
 ```
 

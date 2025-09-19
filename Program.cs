@@ -14,9 +14,7 @@ namespace ShutUpAndType
 
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static IntPtr _hookID = IntPtr.Zero;
-        private static bool _isRecording = false;
         private static MainForm? _instance;
-        private static IntPtr _previousActiveWindow = IntPtr.Zero;
         private static string? _logDirectory;
 
         private Label statusLabel = null!;
@@ -25,6 +23,8 @@ namespace ShutUpAndType
         private readonly ITranscriptionService _transcriptionService;
         private readonly ISystemTrayService _systemTrayService;
         private readonly IKeyboardSimulationService _keyboardSimulationService;
+        private readonly IAutostartService _autostartService;
+        private readonly IApplicationStateService _applicationStateService;
 
         public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -54,13 +54,17 @@ namespace ShutUpAndType
             IAudioRecordingService audioRecordingService,
             ITranscriptionService transcriptionService,
             ISystemTrayService systemTrayService,
-            IKeyboardSimulationService keyboardSimulationService)
+            IKeyboardSimulationService keyboardSimulationService,
+            IAutostartService autostartService,
+            IApplicationStateService applicationStateService)
         {
             _configurationService = configurationService;
             _audioRecordingService = audioRecordingService;
             _transcriptionService = transcriptionService;
             _systemTrayService = systemTrayService;
             _keyboardSimulationService = keyboardSimulationService;
+            _autostartService = autostartService;
+            _applicationStateService = applicationStateService;
 
             InitializeComponent();
             _instance = this;
@@ -76,6 +80,7 @@ namespace ShutUpAndType
             _systemTrayService.SettingsRequested += (s, e) => ShowSettings();
 
             _audioRecordingService.RecordingCompleted += OnRecordingCompleted;
+            _applicationStateService.StateChanged += OnApplicationStateChanged;
         }
 
         private void ShowWindow()
@@ -87,18 +92,19 @@ namespace ShutUpAndType
 
         private void ShowWindowWithFocusPreservation()
         {
-            // Сохраняем активное окно
-            _previousActiveWindow = GetForegroundWindow();
+            // Save the currently active window
+            IntPtr activeWindow = GetForegroundWindow();
+            _applicationStateService.SetPreviousActiveWindow(activeWindow);
 
-            // Показываем наше окно
+            // Show our window
             Show();
             WindowState = FormWindowState.Normal;
             BringToFront();
 
-            // Сразу возвращаем фокус предыдущему окну
-            if (_previousActiveWindow != IntPtr.Zero)
+            // Immediately return focus to the previous window
+            if (activeWindow != IntPtr.Zero)
             {
-                SetForegroundWindow(_previousActiveWindow);
+                SetForegroundWindow(activeWindow);
             }
         }
 
@@ -109,7 +115,7 @@ namespace ShutUpAndType
 
         private void ShowSettings()
         {
-            var settingsForm = new Services.SettingsForm(_configurationService);
+            var settingsForm = new Services.SettingsForm(_configurationService, _autostartService);
             if (settingsForm.ShowDialog() == DialogResult.OK)
             {
                 ValidateApiKey();
@@ -120,38 +126,119 @@ namespace ShutUpAndType
         {
             try
             {
-                // Сбрасываем флаг записи (важно для автоматического завершения по таймауту)
-                _isRecording = false;
-
-                Invoke(() =>
+                if (!_applicationStateService.TryTransitionTo(ApplicationState.Transcribing))
                 {
-                    statusLabel.Text = "Transcribing...";
-                    statusLabel.ForeColor = Color.Blue;
-                });
+                    LogError("Invalid state transition to Transcribing");
+                    return;
+                }
 
                 var transcriptionResult = await _transcriptionService.TranscribeAsync(audioFilePath);
 
-                Invoke(() =>
+                if (InvokeRequired)
                 {
-                    statusLabel.Text = "Transcription successful";
-                    statusLabel.ForeColor = Color.Green;
-                    _keyboardSimulationService.TypeText(transcriptionResult);
-
-                    // Hide window after 2 seconds
-                    var hideTimer = new System.Windows.Forms.Timer();
-                    hideTimer.Interval = 2000;
-                    hideTimer.Tick += (s, e) => { HideWindow(); hideTimer.Stop(); hideTimer.Dispose(); };
-                    hideTimer.Start();
-                });
+                    Invoke(() => ProcessTranscriptionResult(transcriptionResult));
+                }
+                else
+                {
+                    ProcessTranscriptionResult(transcriptionResult);
+                }
             }
             catch (Exception ex)
             {
                 LogError("Transcription failed", ex);
-                Invoke(() =>
+
+                _applicationStateService.TryTransitionTo(ApplicationState.Error);
+
+                if (InvokeRequired)
                 {
-                    statusLabel.Text = $"Error: {ex.Message}";
+                    Invoke(() => UpdateStatusForError(ex.Message));
+                }
+                else
+                {
+                    UpdateStatusForError(ex.Message);
+                }
+            }
+        }
+
+        private void ProcessTranscriptionResult(string transcriptionResult)
+        {
+            try
+            {
+                statusLabel.Text = "Transcription successful";
+                statusLabel.ForeColor = Color.Green;
+                _keyboardSimulationService.TypeText(transcriptionResult);
+
+                // Hide window after 2 seconds and reset to idle
+                var hideTimer = new System.Windows.Forms.Timer();
+                hideTimer.Interval = 2000;
+                hideTimer.Tick += (s, e) =>
+                {
+                    HideWindow();
+                    _applicationStateService.ResetToIdle();
+                    hideTimer.Stop();
+                    hideTimer.Dispose();
+                };
+                hideTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                LogError("Error processing transcription result", ex);
+                UpdateStatusForError("Failed to type text");
+            }
+        }
+
+        private void UpdateStatusForError(string errorMessage)
+        {
+            statusLabel.Text = $"Error: {errorMessage}";
+            statusLabel.ForeColor = Color.Red;
+
+            // Reset to idle after 5 seconds
+            var resetTimer = new System.Windows.Forms.Timer();
+            resetTimer.Interval = 5000;
+            resetTimer.Tick += (s, e) =>
+            {
+                _applicationStateService.ResetToIdle();
+                resetTimer.Stop();
+                resetTimer.Dispose();
+            };
+            resetTimer.Start();
+        }
+
+        private void OnApplicationStateChanged(object? sender, ApplicationState newState)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => UpdateUIForState(newState));
+            }
+            else
+            {
+                UpdateUIForState(newState);
+            }
+        }
+
+        private void UpdateUIForState(ApplicationState state)
+        {
+            switch (state)
+            {
+                case ApplicationState.Idle:
+                    statusLabel.Text = "Ready - Press SCRLK to record";
+                    statusLabel.ForeColor = Color.Green;
+                    break;
+                case ApplicationState.Recording:
+                    statusLabel.Text = "Recording...";
                     statusLabel.ForeColor = Color.Red;
-                });
+                    break;
+                case ApplicationState.Processing:
+                    statusLabel.Text = "Processing...";
+                    statusLabel.ForeColor = Color.Orange;
+                    break;
+                case ApplicationState.Transcribing:
+                    statusLabel.Text = "Transcribing...";
+                    statusLabel.ForeColor = Color.Blue;
+                    break;
+                case ApplicationState.Error:
+                    // Error message set elsewhere
+                    break;
             }
         }
 
@@ -265,15 +352,27 @@ namespace ShutUpAndType
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _audioRecordingService.Dispose();
-            _systemTrayService.Dispose();
-            _transcriptionService.Dispose();
-
-            if (_hookID != IntPtr.Zero)
+            try
             {
-                UnhookWindowsHookEx(_hookID);
+                // Dispose services in reverse dependency order
+                _applicationStateService?.Dispose();
+                _audioRecordingService?.Dispose();
+                _systemTrayService?.Dispose();
+                _transcriptionService?.Dispose();
+
+                if (_hookID != IntPtr.Zero)
+                {
+                    UnhookWindowsHookEx(_hookID);
+                }
             }
-            base.OnFormClosed(e);
+            catch (Exception ex)
+            {
+                LogError("Error during form disposal", ex);
+            }
+            finally
+            {
+                base.OnFormClosed(e);
+            }
         }
 
         [STAThread]
@@ -284,25 +383,41 @@ namespace ShutUpAndType
 
             InitializeLogging();
 
-            // Setup dependency injection
-            var configurationService = new ConfigurationService();
-            var audioRecordingService = new AudioRecordingService();
-            var transcriptionService = new WhisperTranscriptionService(configurationService);
-            var systemTrayService = new SystemTrayService();
-            var keyboardSimulationService = new KeyboardSimulationService();
+            try
+            {
+                // Setup dependency injection
+                var configurationService = new ConfigurationService();
+                var audioRecordingService = new AudioRecordingService();
+                var transcriptionService = new WhisperTranscriptionService(configurationService);
+                var systemTrayService = new SystemTrayService();
+                var keyboardSimulationService = new KeyboardSimulationService();
+                var autostartService = new AutostartService();
+                var applicationStateService = new ApplicationStateService();
 
-            _hookID = SetHook(_proc);
+                _hookID = SetHook(_proc);
 
-            var mainForm = new MainForm(
-                configurationService,
-                audioRecordingService,
-                transcriptionService,
-                systemTrayService,
-                keyboardSimulationService);
+                var mainForm = new MainForm(
+                    configurationService,
+                    audioRecordingService,
+                    transcriptionService,
+                    systemTrayService,
+                    keyboardSimulationService,
+                    autostartService,
+                    applicationStateService);
 
-            Application.Run(mainForm);
-
-            UnhookWindowsHookEx(_hookID);
+                Application.Run(mainForm);
+            }
+            catch (Exception ex)
+            {
+                LogError("Fatal application error", ex);
+            }
+            finally
+            {
+                if (_hookID != IntPtr.Zero)
+                {
+                    UnhookWindowsHookEx(_hookID);
+                }
+            }
         }
 
         private static IntPtr SetHook(LowLevelKeyboardProc proc)
@@ -324,32 +439,72 @@ namespace ShutUpAndType
 
                 if (vkCode == VK_SCROLL && _instance != null)
                 {
-                    _instance.Invoke(new Action(() =>
+                    try
                     {
-                        // Ignore Scroll Lock presses while transcribing
-                        if (_instance.statusLabel.Text == "Transcribing...")
-                            return;
-
-                        _isRecording = !_isRecording;
-
-                        if (_isRecording)
-                        {
-                            _instance.statusLabel.Text = "Recording...";
-                            _instance.statusLabel.ForeColor = Color.Red;
-                            _instance.ShowWindowWithFocusPreservation();
-                            _instance._audioRecordingService.StartRecording();
-                        }
-                        else
-                        {
-                            _instance.statusLabel.Text = "Processing...";
-                            _instance.statusLabel.ForeColor = Color.Orange;
-                            _instance._audioRecordingService.StopRecording();
-                        }
-                    }));
+                        _instance.BeginInvoke(new Action(() => _instance.HandleScrollLockPress()));
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError("Error handling scroll lock press", ex);
+                    }
                 }
             }
 
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+        private void HandleScrollLockPress()
+        {
+            try
+            {
+                var currentState = _applicationStateService.CurrentState;
+
+                // Ignore keypresses during transcribing or error states
+                if (currentState == ApplicationState.Transcribing || currentState == ApplicationState.Error)
+                    return;
+
+                if (currentState == ApplicationState.Idle)
+                {
+                    // Start recording
+                    if (_applicationStateService.TryTransitionTo(ApplicationState.Recording))
+                    {
+                        ShowWindowWithFocusPreservation();
+                        try
+                        {
+                            _audioRecordingService.StartRecording();
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError("Failed to start recording", ex);
+                            _applicationStateService.TryTransitionTo(ApplicationState.Error);
+                            UpdateStatusForError("Failed to start recording");
+                        }
+                    }
+                }
+                else if (currentState == ApplicationState.Recording)
+                {
+                    // Stop recording
+                    if (_applicationStateService.TryTransitionTo(ApplicationState.Processing))
+                    {
+                        try
+                        {
+                            _audioRecordingService.StopRecording();
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError("Failed to stop recording", ex);
+                            _applicationStateService.TryTransitionTo(ApplicationState.Error);
+                            UpdateStatusForError("Failed to stop recording");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("Error in HandleScrollLockPress", ex);
+                _applicationStateService.TryTransitionTo(ApplicationState.Error);
+                UpdateStatusForError("Internal error");
+            }
         }
     }
 }

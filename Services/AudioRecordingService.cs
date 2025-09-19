@@ -5,101 +5,162 @@ namespace ShutUpAndType.Services
 {
     public class AudioRecordingService : IAudioRecordingService, IDisposable
     {
+        private readonly object _recordingLock = new object();
         private WaveInEvent? _waveIn;
         private WaveFileWriter? _waveWriter;
         private string? _currentRecordingFile;
         private System.Timers.Timer? _recordingTimer;
-        private const int MAX_RECORDING_SECONDS = 60; // Максимум 60 секунд записи
+        private volatile bool _isDisposed = false;
+        private const int MAX_RECORDING_SECONDS = 60;
 
         public event EventHandler<string>? RecordingCompleted;
-        public bool IsRecording => _waveIn != null;
+        public bool IsRecording
+        {
+            get
+            {
+                lock (_recordingLock)
+                {
+                    return _waveIn != null && !_isDisposed;
+                }
+            }
+        }
 
         public void StartRecording()
         {
-            try
+            lock (_recordingLock)
             {
-                // Ensure ShutUpAndType directory exists in temp
-                string tempDir = Path.Combine(Path.GetTempPath(), "ShutUpAndType");
-                Directory.CreateDirectory(tempDir);
+                if (_isDisposed)
+                    throw new ObjectDisposedException(nameof(AudioRecordingService));
 
-                // Generate timestamp-based filename
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                _currentRecordingFile = Path.Combine(tempDir, $"{timestamp}-recording.wav");
+                if (_waveIn != null)
+                    throw new InvalidOperationException("Recording is already in progress");
 
-                // Initialize audio capture with 16kHz, 16-bit, mono
-                _waveIn = new WaveInEvent();
-                _waveIn.WaveFormat = new WaveFormat(16000, 16, 1);
+                try
+                {
+                    // Ensure ShutUpAndType directory exists in temp
+                    string tempDir = Path.Combine(Path.GetTempPath(), "ShutUpAndType");
+                    Directory.CreateDirectory(tempDir);
 
-                // Initialize WAV writer
-                _waveWriter = new WaveFileWriter(_currentRecordingFile, _waveIn.WaveFormat);
+                    // Generate timestamp-based filename
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    _currentRecordingFile = Path.Combine(tempDir, $"{timestamp}-recording.wav");
 
-                _waveIn.DataAvailable += OnDataAvailable;
-                _waveIn.StartRecording();
+                    // Initialize audio capture with 16kHz, 16-bit, mono
+                    _waveIn = new WaveInEvent();
+                    _waveIn.WaveFormat = new WaveFormat(16000, 16, 1);
 
-                // Запускаем таймер для автоматического завершения записи
-                _recordingTimer = new System.Timers.Timer(MAX_RECORDING_SECONDS * 1000);
-                _recordingTimer.Elapsed += OnRecordingTimeout;
-                _recordingTimer.AutoReset = false; // Срабатывает только один раз
-                _recordingTimer.Start();
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error starting recording: {ex.Message}", ex);
+                    // Initialize WAV writer
+                    _waveWriter = new WaveFileWriter(_currentRecordingFile, _waveIn.WaveFormat);
+
+                    _waveIn.DataAvailable += OnDataAvailable;
+                    _waveIn.StartRecording();
+
+                    // Start timeout timer
+                    _recordingTimer = new System.Timers.Timer(MAX_RECORDING_SECONDS * 1000);
+                    _recordingTimer.Elapsed += OnRecordingTimeout;
+                    _recordingTimer.AutoReset = false;
+                    _recordingTimer.Start();
+                }
+                catch (Exception ex)
+                {
+                    // Cleanup on failure
+                    CleanupRecordingResources();
+                    throw new InvalidOperationException($"Error starting recording: {ex.Message}", ex);
+                }
             }
         }
 
         public void StopRecording()
         {
-            try
+            string? completedFile = null;
+
+            lock (_recordingLock)
             {
-                // Останавливаем таймер
-                _recordingTimer?.Stop();
-                _recordingTimer?.Dispose();
-                _recordingTimer = null;
+                if (_isDisposed || _waveIn == null)
+                    return; // Already stopped or disposed
 
-                var recordingFile = _currentRecordingFile;
+                try
+                {
+                    completedFile = _currentRecordingFile;
+                    CleanupRecordingResources();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Error stopping recording: {ex.Message}", ex);
+                }
+            }
 
-                _waveIn?.StopRecording();
-                _waveIn?.Dispose();
-                _waveIn = null;
-
-                _waveWriter?.Dispose();
-                _waveWriter = null;
-
-                var completedFile = _currentRecordingFile;
-                _currentRecordingFile = null;
-
-                if (!string.IsNullOrEmpty(completedFile))
+            // Fire event outside of lock to prevent deadlocks
+            if (!string.IsNullOrEmpty(completedFile))
+            {
+                try
                 {
                     RecordingCompleted?.Invoke(this, completedFile);
                 }
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error stopping recording: {ex.Message}", ex);
+                catch (Exception ex)
+                {
+                    // Log error but don't throw to prevent cascading failures
+                    System.Diagnostics.Debug.WriteLine($"Error in RecordingCompleted event: {ex.Message}");
+                }
             }
         }
 
         private void OnDataAvailable(object? sender, WaveInEventArgs e)
         {
-            if (_waveWriter != null)
+            lock (_recordingLock)
             {
-                _waveWriter.Write(e.Buffer, 0, e.BytesRecorded);
+                if (!_isDisposed && _waveWriter != null)
+                {
+                    _waveWriter.Write(e.Buffer, 0, e.BytesRecorded);
+                }
             }
         }
 
         private void OnRecordingTimeout(object? sender, ElapsedEventArgs e)
         {
-            // Автоматически останавливаем запись при таймауте
             StopRecording();
+        }
+
+        private void CleanupRecordingResources()
+        {
+            try
+            {
+                _recordingTimer?.Stop();
+                _recordingTimer?.Dispose();
+                _recordingTimer = null;
+            }
+            catch { }
+
+            try
+            {
+                _waveIn?.StopRecording();
+                _waveIn?.Dispose();
+                _waveIn = null;
+            }
+            catch { }
+
+            try
+            {
+                _waveWriter?.Dispose();
+                _waveWriter = null;
+            }
+            catch { }
+
+            _currentRecordingFile = null;
         }
 
         public void Dispose()
         {
-            _recordingTimer?.Stop();
-            _recordingTimer?.Dispose();
-            _waveIn?.Dispose();
-            _waveWriter?.Dispose();
+            lock (_recordingLock)
+            {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+                CleanupRecordingResources();
+            }
+
+            RecordingCompleted = null;
         }
     }
 }
