@@ -6,12 +6,17 @@ namespace ShutUpAndType.Services
     public class AudioRecordingService : IAudioRecordingService, IDisposable
     {
         private readonly object _recordingLock = new object();
+        private readonly IConfigurationService _configurationService;
         private WaveInEvent? _waveIn;
         private WaveFileWriter? _waveWriter;
         private string? _currentRecordingFile;
         private System.Timers.Timer? _recordingTimer;
         private volatile bool _isDisposed = false;
-        private const int MAX_RECORDING_SECONDS = 60;
+
+        public AudioRecordingService(IConfigurationService configurationService)
+        {
+            _configurationService = configurationService;
+        }
 
         public event EventHandler<string>? RecordingCompleted;
         public bool IsRecording
@@ -56,7 +61,8 @@ namespace ShutUpAndType.Services
                     _waveIn.StartRecording();
 
                     // Start timeout timer
-                    _recordingTimer = new System.Timers.Timer(MAX_RECORDING_SECONDS * 1000);
+                    int timeoutSeconds = (int)_configurationService.RecordingTimeout;
+                    _recordingTimer = new System.Timers.Timer(timeoutSeconds * 1000);
                     _recordingTimer.Elapsed += OnRecordingTimeout;
                     _recordingTimer.AutoReset = false;
                     _recordingTimer.Start();

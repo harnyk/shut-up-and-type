@@ -1,0 +1,205 @@
+name: Generate Icons
+
+on:
+  push:
+    paths:
+      - 'assets/icons/source/**'
+      - '.github/workflows/generate-icons.yml'
+  pull_request:
+    paths:
+      - 'assets/icons/source/**'
+      - '.github/workflows/generate-icons.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-icons:
+    name: Generate Application Icons
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install Icon Generation Tools
+        run: |
+          npm install -g sharp-cli @squoosh/cli
+
+      - name: Create Output Directories
+        run: |
+          mkdir -p assets/icons/generated
+          mkdir -p assets/icons/ico
+
+      - name: Generate PNG Icons from SVG
+        run: |
+          # Define all required icon sizes
+          SIZES=(16 20 24 32 40 48 64 96 128 256 512)
+
+          for size in "${SIZES[@]}"; do
+            echo "Generating ${size}x${size} icon..."
+            sharp \
+              --input assets/icons/source/microphone.svg \
+              --output assets/icons/generated/microphone-${size}x${size}.png \
+              resize ${size} ${size} \
+              --format png
+          done
+
+      - name: Optimize PNG Files
+        run: |
+          # Optimize all generated PNG files
+          for file in assets/icons/generated/*.png; do
+            echo "Optimizing $file..."
+            squoosh-cli \
+              --resize "{\"enabled\":false}" \
+              --quantize "{\"enabled\":false}" \
+              --oxipng "{\"enabled\":true,\"level\":6}" \
+              "$file" \
+              --output-dir assets/icons/generated/
+          done
+
+      - name: Generate Windows ICO Files
+        run: |
+          echo "Creating main application ICO with multiple resolutions..."
+          # Main application icon (16, 32, 48, 256)
+          magick convert \
+            assets/icons/generated/microphone-16x16.png \
+            assets/icons/generated/microphone-32x32.png \
+            assets/icons/generated/microphone-48x48.png \
+            assets/icons/generated/microphone-256x256.png \
+            assets/icons/ico/microphone.ico
+
+          echo "Creating system tray ICO (16, 20, 24, 32)..."
+          # System tray icon (smaller sizes for better performance)
+          magick convert \
+            assets/icons/generated/microphone-16x16.png \
+            assets/icons/generated/microphone-20x20.png \
+            assets/icons/generated/microphone-24x24.png \
+            assets/icons/generated/microphone-32x32.png \
+            assets/icons/ico/microphone-tray.ico
+
+      - name: Validate Generated Icons
+        run: |
+          echo "Validating generated icons..."
+
+          # Check if all expected files exist
+          EXPECTED_PNGS=(16 20 24 32 40 48 64 96 128 256 512)
+          for size in "${EXPECTED_PNGS[@]}"; do
+            file="assets/icons/generated/microphone-${size}x${size}.png"
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing $file"
+              exit 1
+            fi
+            echo "✓ Found $file"
+          done
+
+          # Check ICO files
+          if [ ! -f "assets/icons/ico/microphone.ico" ]; then
+            echo "ERROR: Missing microphone.ico"
+            exit 1
+          fi
+
+          if [ ! -f "assets/icons/ico/microphone-tray.ico" ]; then
+            echo "ERROR: Missing microphone-tray.ico"
+            exit 1
+          fi
+
+          echo "✓ All icon files generated successfully"
+
+      - name: Generate Icon Report
+        run: |
+          echo "# Icon Generation Report" > icon-report.md
+          echo "" >> icon-report.md
+          echo "Generated on: $(date)" >> icon-report.md
+          echo "" >> icon-report.md
+          echo "## Generated PNG Files" >> icon-report.md
+          echo "" >> icon-report.md
+
+          for file in assets/icons/generated/*.png; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              size=$(identify -format "%wx%h" "$file")
+              filesize=$(du -h "$file" | cut -f1)
+              echo "- **$filename**: ${size}px, ${filesize}" >> icon-report.md
+            fi
+          done
+
+          echo "" >> icon-report.md
+          echo "## Generated ICO Files" >> icon-report.md
+          echo "" >> icon-report.md
+
+          for file in assets/icons/ico/*.ico; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              filesize=$(du -h "$file" | cut -f1)
+              echo "- **$filename**: ${filesize}" >> icon-report.md
+            fi
+          done
+
+      - name: Update Project Icons
+        run: |
+          # Copy main application icon to root for backwards compatibility
+          cp assets/icons/ico/microphone.ico microphone.ico
+
+          echo "Updated project icon files"
+
+      - name: Commit Generated Icons
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add assets/icons/generated/
+          git add assets/icons/ico/
+          git add microphone.ico
+
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "🎨 Auto-generate icons from SVG source
+
+- Generated PNG icons at multiple resolutions (16px to 512px)
+- Created optimized ICO files for Windows
+- Updated main application icon
+
+Generated by: ${{ github.workflow }} #${{ github.run_number }}"
+            git push
+          else
+            echo "No icon changes to commit"
+          fi
+
+      - name: Upload Icon Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-icons
+          path: |
+            assets/icons/generated/
+            assets/icons/ico/
+            icon-report.md
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const iconReport = fs.readFileSync('icon-report.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🎨 Icon Generation Results\n\n${iconReport}\n\n*Icons generated automatically from SVG source.*`
+            });
