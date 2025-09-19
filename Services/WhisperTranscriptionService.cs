@@ -13,7 +13,7 @@ namespace ShutUpAndType.Services
 
         public async Task<string> TranscribeAsync(string audioFilePath)
         {
-            var apiKey = _configurationService.GetApiKey();
+            var apiKey = _configurationService.OpenAIApiKey;
             if (string.IsNullOrEmpty(apiKey))
             {
                 throw new InvalidOperationException("No API key configured");

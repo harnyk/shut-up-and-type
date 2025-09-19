@@ -13,7 +13,6 @@ namespace ShutUpAndType.Services
             LoadConfiguration();
         }
 
-        public string? GetApiKey() => _apiKey;
 
         public string? OpenAIApiKey => _apiKey;
 
