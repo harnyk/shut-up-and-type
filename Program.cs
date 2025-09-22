@@ -18,6 +18,7 @@ namespace ShutUpAndType
         private static string? _logDirectory;
 
         private Label statusLabel = null!;
+        private VUMeterControl vuMeter = null!;
         private readonly IConfigurationService _configurationService;
         private readonly IAudioRecordingService _audioRecordingService;
         private readonly ITranscriptionService _transcriptionService;
@@ -80,6 +81,7 @@ namespace ShutUpAndType
             _systemTrayService.SettingsRequested += (s, e) => ShowSettings();
 
             _audioRecordingService.RecordingCompleted += OnRecordingCompleted;
+            _audioRecordingService.LevelChanged += OnAudioLevelChanged;
             _applicationStateService.StateChanged += OnApplicationStateChanged;
         }
 
@@ -174,6 +176,7 @@ namespace ShutUpAndType
 
                 statusLabel.Text = "Transcription successful";
                 statusLabel.ForeColor = Color.Green;
+                vuMeter.Visible = false;
                 _keyboardSimulationService.TypeText(transcriptionResult);
 
                 // Hide window after 1 second and reset to idle
@@ -212,6 +215,18 @@ namespace ShutUpAndType
             resetTimer.Start();
         }
 
+        private void OnAudioLevelChanged(object? sender, float level)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(() => vuMeter.SetLevel(level));
+            }
+            else
+            {
+                vuMeter.SetLevel(level);
+            }
+        }
+
         private void OnApplicationStateChanged(object? sender, ApplicationState newState)
         {
             if (InvokeRequired)
@@ -231,24 +246,29 @@ namespace ShutUpAndType
                 case ApplicationState.Idle:
                     statusLabel.Text = HotkeyHelper.GetStatusMessage(_configurationService.Hotkey);
                     statusLabel.ForeColor = Color.Green;
+                    vuMeter.Visible = false;
                     break;
                 case ApplicationState.Recording:
                     statusLabel.Text = "Recording...";
                     statusLabel.ForeColor = Color.Red;
+                    vuMeter.Visible = true;
                     break;
                 case ApplicationState.Processing:
                     statusLabel.Text = "Processing...";
                     statusLabel.ForeColor = Color.Orange;
+                    vuMeter.Visible = false;
                     break;
                 case ApplicationState.Transcribing:
                     statusLabel.Text = "Transcribing...";
                     statusLabel.ForeColor = Color.Blue;
+                    vuMeter.Visible = false;
                     break;
                 case ApplicationState.TranscriptionComplete:
                     // UI already updated in ProcessTranscriptionResult
                     break;
                 case ApplicationState.Error:
                     // Error message set elsewhere
+                    vuMeter.Visible = false;
                     break;
             }
         }
@@ -316,6 +336,7 @@ namespace ShutUpAndType
         private void InitializeComponent()
         {
             this.statusLabel = new Label();
+            this.vuMeter = new VUMeterControl();
             this.SuspendLayout();
 
             // Set the application icon
@@ -326,16 +347,24 @@ namespace ShutUpAndType
             this.statusLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
             this.statusLabel.Location = new Point(10, 10);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new Size(280, 40);
+            this.statusLabel.Size = new Size(280, 25);
             this.statusLabel.TabIndex = 0;
             this.statusLabel.Text = "Loading...";
             this.statusLabel.TextAlign = ContentAlignment.MiddleCenter;
 
+            // vuMeter
+            this.vuMeter.Location = new Point(50, 40);
+            this.vuMeter.Name = "vuMeter";
+            this.vuMeter.Size = new Size(200, 30);
+            this.vuMeter.TabIndex = 1;
+            this.vuMeter.Visible = false; // Initially hidden
+
             // MainForm
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new Size(300, 60);
+            this.ClientSize = new Size(300, 80);
             this.Controls.Add(this.statusLabel);
+            this.Controls.Add(this.vuMeter);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MinimizeBox = false;
             this.MaximizeBox = false;

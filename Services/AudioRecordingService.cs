@@ -19,6 +19,7 @@ namespace ShutUpAndType.Services
         }
 
         public event EventHandler<string>? RecordingCompleted;
+        public event EventHandler<float>? LevelChanged;
         public bool IsRecording
         {
             get
@@ -118,8 +119,36 @@ namespace ShutUpAndType.Services
                 if (!_isDisposed && _waveWriter != null)
                 {
                     _waveWriter.Write(e.Buffer, 0, e.BytesRecorded);
+
+                    // Calculate audio level for VU meter
+                    float level = CalculateAudioLevel(e.Buffer, e.BytesRecorded);
+                    LevelChanged?.Invoke(this, level);
                 }
             }
+        }
+
+        private float CalculateAudioLevel(byte[] buffer, int bytesRecorded)
+        {
+            if (bytesRecorded == 0) return 0f;
+
+            // Convert bytes to 16-bit samples and calculate RMS
+            long sum = 0;
+            int sampleCount = bytesRecorded / 2; // 16-bit samples
+
+            for (int i = 0; i < bytesRecorded - 1; i += 2)
+            {
+                // Convert bytes to 16-bit signed integer (little-endian)
+                short sample = (short)(buffer[i] | (buffer[i + 1] << 8));
+                sum += sample * sample;
+            }
+
+            if (sampleCount == 0) return 0f;
+
+            // Calculate RMS and normalize to 0-1 range
+            double rms = Math.Sqrt((double)sum / sampleCount);
+            float normalizedLevel = (float)(rms / 32768.0); // 32768 is max value for 16-bit
+
+            return Math.Min(1.0f, normalizedLevel);
         }
 
         private void OnRecordingTimeout(object? sender, ElapsedEventArgs e)
