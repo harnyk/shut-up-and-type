@@ -16,6 +16,8 @@ namespace ShutUpAndType.Services
         private Label hotkeyLabel = null!;
         private Label configPathLabel = null!;
         private TextBox configPathTextBox = null!;
+        private Button configCopyButton = null!;
+        private Button configOpenButton = null!;
         private Label languageLabel = null!;
         private ComboBox languageComboBox = null!;
         private Label timeoutLabel = null!;
@@ -61,6 +63,8 @@ namespace ShutUpAndType.Services
             this.autostartCheckBox = new CheckBox();
             this.configPathLabel = new Label();
             this.configPathTextBox = new TextBox();
+            this.configCopyButton = new Button();
+            this.configOpenButton = new Button();
             this.languageLabel = new Label();
             this.languageComboBox = new ComboBox();
             this.timeoutLabel = new Label();
@@ -74,30 +78,19 @@ namespace ShutUpAndType.Services
             mainLayout.AutoSize = true;
             mainLayout.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             mainLayout.Dock = DockStyle.Fill;
-            mainLayout.Padding = new Padding(12);
-            mainLayout.RowCount = 8;
+            mainLayout.Padding = new Padding(12, 12, 12, 6);
             mainLayout.ColumnCount = 2;
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
 
             // apiKeyLabel
             this.apiKeyLabel.AutoSize = true;
-            this.apiKeyLabel.Name = "apiKeyLabel";
-            this.apiKeyLabel.TabIndex = 0;
             this.apiKeyLabel.Text = "OpenAI API Key:";
             this.apiKeyLabel.Anchor = AnchorStyles.Left;
             mainLayout.SetColumnSpan(this.apiKeyLabel, 2);
 
             // apiKeyTextBox
-            this.apiKeyTextBox.Name = "apiKeyTextBox";
-            this.apiKeyTextBox.TabIndex = 1;
             this.apiKeyTextBox.UseSystemPasswordChar = true;
             this.apiKeyTextBox.Dock = DockStyle.Fill;
             this.apiKeyTextBox.Margin = new Padding(0, 3, 0, 3);
@@ -105,57 +98,76 @@ namespace ShutUpAndType.Services
 
             // hotkeyLabel
             this.hotkeyLabel.AutoSize = true;
-            this.hotkeyLabel.Name = "hotkeyLabel";
-            this.hotkeyLabel.TabIndex = 2;
             this.hotkeyLabel.Text = "Recording Hotkey:";
             this.hotkeyLabel.Anchor = AnchorStyles.Left;
 
             // hotkeyComboBox
-            this.hotkeyComboBox.Name = "hotkeyComboBox";
-            this.hotkeyComboBox.TabIndex = 3;
             this.hotkeyComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             this.hotkeyComboBox.Anchor = AnchorStyles.Left;
             this.hotkeyComboBox.Items.AddRange(new object[] { "Scroll Lock", "Caps Lock" });
 
             // autostartLabel
             this.autostartLabel.AutoSize = true;
-            this.autostartLabel.Name = "autostartLabel";
-            this.autostartLabel.TabIndex = 4;
             this.autostartLabel.Text = "Start with Windows:";
             this.autostartLabel.Anchor = AnchorStyles.Left;
 
             // autostartCheckBox
             this.autostartCheckBox.AutoSize = true;
-            this.autostartCheckBox.Name = "autostartCheckBox";
-            this.autostartCheckBox.TabIndex = 5;
-            this.autostartCheckBox.UseVisualStyleBackColor = true;
             this.autostartCheckBox.Anchor = AnchorStyles.Left;
 
             // configPathLabel
             this.configPathLabel.AutoSize = true;
-            this.configPathLabel.Name = "configPathLabel";
-            this.configPathLabel.TabIndex = 6;
             this.configPathLabel.Text = "Config File:";
             this.configPathLabel.Anchor = AnchorStyles.Left;
 
             // configPathTextBox
-            this.configPathTextBox.Name = "configPathTextBox";
-            this.configPathTextBox.TabIndex = 7;
             this.configPathTextBox.ReadOnly = true;
             this.configPathTextBox.BackColor = SystemColors.Control;
             this.configPathTextBox.Dock = DockStyle.Fill;
-            this.configPathTextBox.Margin = new Padding(0, 3, 0, 3);
+            this.configPathTextBox.Margin = new Padding(0, 3, 0, 0);
+
+            // Create config links panel
+            var configLinksPanel = new FlowLayoutPanel();
+            configLinksPanel.FlowDirection = FlowDirection.LeftToRight;
+            configLinksPanel.Dock = DockStyle.Fill;
+            configLinksPanel.AutoSize = true;
+            configLinksPanel.Margin = new Padding(0, 2, 0, 3);
+            configLinksPanel.Padding = new Padding(0);
+
+            // configCopyButton as link
+            this.configCopyButton.Text = "Copy";
+            this.configCopyButton.FlatStyle = FlatStyle.Flat;
+            this.configCopyButton.FlatAppearance.BorderSize = 0;
+            this.configCopyButton.ForeColor = SystemColors.HotTrack;
+            this.configCopyButton.BackColor = Color.Transparent;
+            this.configCopyButton.FlatAppearance.BorderSize = 0;
+            this.configCopyButton.Cursor = Cursors.Hand;
+            this.configCopyButton.AutoSize = true;
+            this.configCopyButton.Margin = new Padding(0, 0, 8, 0);
+            this.configCopyButton.Click += ConfigCopyButton_Click;
+
+            // configOpenButton as link
+            this.configOpenButton.Text = "Open";
+            this.configOpenButton.FlatStyle = FlatStyle.Flat;
+            this.configOpenButton.FlatAppearance.BorderSize = 0;
+            this.configOpenButton.ForeColor = SystemColors.HotTrack;
+            this.configOpenButton.BackColor = Color.Transparent;
+            this.configOpenButton.FlatAppearance.BorderSize = 0;
+            this.configOpenButton.Cursor = Cursors.Hand;
+            this.configOpenButton.AutoSize = true;
+            this.configOpenButton.Margin = new Padding(0);
+            this.configOpenButton.Click += ConfigOpenButton_Click;
+
+            // Add links to panel
+            configLinksPanel.Controls.Add(this.configCopyButton);
+            configLinksPanel.Controls.Add(this.configOpenButton);
 
             // languageLabel
             this.languageLabel.AutoSize = true;
-            this.languageLabel.Name = "languageLabel";
-            this.languageLabel.TabIndex = 8;
             this.languageLabel.Text = "Language:";
             this.languageLabel.Anchor = AnchorStyles.Left;
 
             // languageComboBox
-            this.languageComboBox.Name = "languageComboBox";
-            this.languageComboBox.TabIndex = 9;
             this.languageComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             this.languageComboBox.Anchor = AnchorStyles.Left;
             this.languageComboBox.Items.AddRange(new object[] {
@@ -169,45 +181,35 @@ namespace ShutUpAndType.Services
 
             // timeoutLabel
             this.timeoutLabel.AutoSize = true;
-            this.timeoutLabel.Name = "timeoutLabel";
-            this.timeoutLabel.TabIndex = 10;
             this.timeoutLabel.Text = "Max Recording:";
             this.timeoutLabel.Anchor = AnchorStyles.Left;
 
             // timeoutComboBox
-            this.timeoutComboBox.Name = "timeoutComboBox";
-            this.timeoutComboBox.TabIndex = 11;
             this.timeoutComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
             this.timeoutComboBox.Anchor = AnchorStyles.Left;
             this.timeoutComboBox.Items.AddRange(new object[] { "1 minute", "2 minutes", "5 minutes" });
 
-            // Create button panel
+            // buttonPanel
             var buttonPanel = new FlowLayoutPanel();
             buttonPanel.FlowDirection = FlowDirection.RightToLeft;
-            buttonPanel.Dock = DockStyle.Fill;
-            buttonPanel.Margin = new Padding(0, 6, 0, 0);
+            buttonPanel.AutoSize = true;
+            buttonPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            buttonPanel.Anchor = AnchorStyles.Right;
 
-            // saveButton
-            this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new Size(75, 23);
-            this.saveButton.TabIndex = 12;
+
+
             this.saveButton.Text = "Save";
-            this.saveButton.UseVisualStyleBackColor = true;
+            this.saveButton.Size = new Size(75, 23);
             this.saveButton.Click += SaveButton_Click;
 
-            // cancelButton
-            this.cancelButton.Name = "cancelButton";
-            this.cancelButton.Size = new Size(75, 23);
-            this.cancelButton.TabIndex = 13;
             this.cancelButton.Text = "Cancel";
-            this.cancelButton.UseVisualStyleBackColor = true;
+            this.cancelButton.Size = new Size(75, 23);
             this.cancelButton.Click += CancelButton_Click;
 
-            // Add buttons to button panel
             buttonPanel.Controls.Add(this.cancelButton);
             buttonPanel.Controls.Add(this.saveButton);
 
-            // Add controls to main layout
+            // add to mainLayout
             mainLayout.Controls.Add(this.apiKeyLabel, 0, 0);
             mainLayout.Controls.Add(this.apiKeyTextBox, 0, 1);
             mainLayout.Controls.Add(this.hotkeyLabel, 0, 2);
@@ -220,21 +222,19 @@ namespace ShutUpAndType.Services
             mainLayout.Controls.Add(this.autostartCheckBox, 1, 5);
             mainLayout.Controls.Add(this.configPathLabel, 0, 6);
             mainLayout.Controls.Add(this.configPathTextBox, 1, 6);
-            mainLayout.Controls.Add(buttonPanel, 0, 7);
+            mainLayout.Controls.Add(configLinksPanel, 1, 7);
+            mainLayout.Controls.Add(buttonPanel, 0, 8);
             mainLayout.SetColumnSpan(this.apiKeyTextBox, 2);
             mainLayout.SetColumnSpan(buttonPanel, 2);
 
             // SettingsForm
-            this.AutoScaleDimensions = new SizeF(7F, 15F);
-            this.AutoScaleMode = AutoScaleMode.Font;
             this.AutoSize = true;
             this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            this.MinimumSize = new Size(350, 0);
+            this.MinimumSize = new Size(525, 0);
             this.Controls.Add(mainLayout);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "SettingsForm";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Text = AppConstants.SETTINGS_WINDOW_TITLE;
             this.TopMost = true;
@@ -248,7 +248,6 @@ namespace ShutUpAndType.Services
             {
                 _configurationService.SaveApiKey(apiKeyTextBox.Text.Trim());
 
-                // Save hotkey setting
                 var selectedHotkey = hotkeyComboBox.SelectedItem?.ToString() switch
                 {
                     "Caps Lock" => HotkeyType.CapsLock,
@@ -257,7 +256,6 @@ namespace ShutUpAndType.Services
                 };
                 _configurationService.SaveHotkey(selectedHotkey);
 
-                // Save language setting
                 var selectedLanguage = languageComboBox.SelectedItem?.ToString() switch
                 {
                     "Auto-detect" => WhisperLanguage.Auto,
@@ -301,7 +299,6 @@ namespace ShutUpAndType.Services
                 };
                 _configurationService.SaveLanguage(selectedLanguage);
 
-                // Save timeout setting
                 var selectedTimeout = timeoutComboBox.SelectedItem?.ToString() switch
                 {
                     "1 minute" => RecordingTimeout.OneMinute,
@@ -334,6 +331,44 @@ namespace ShutUpAndType.Services
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
+        }
+
+        private void ConfigCopyButton_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(configPathTextBox.Text))
+                {
+                    Clipboard.SetText(configPathTextBox.Text);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error copying to clipboard: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ConfigOpenButton_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(configPathTextBox.Text) && File.Exists(configPathTextBox.Text))
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = configPathTextBox.Text,
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    MessageBox.Show("Config file does not exist.", "File Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
