@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace ShutUpAndType.Services
@@ -23,12 +22,12 @@ namespace ShutUpAndType.Services
                      ControlStyles.DoubleBuffer |
                      ControlStyles.ResizeRedraw, true);
 
-            BackColor = Color.Black;
+            BackColor = Color.Transparent;
             Size = new Size(200, 30);
 
             // Animation timer for smooth level transitions
             _animationTimer = new System.Windows.Forms.Timer();
-            _animationTimer.Interval = 16; // ~60 FPS
+            _animationTimer.Interval = 100; // 10 FPS
             _animationTimer.Tick += OnAnimationTick;
             _animationTimer.Start();
 
@@ -93,171 +92,36 @@ namespace ShutUpAndType.Services
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Clear background with deep black
-            g.Clear(Color.FromArgb(10, 10, 10));
+            int centerX = Width / 2;
+            int centerY = Height / 2;
+            int maxLength = Width - 10;
 
-            // Draw the tube background (dark glass effect)
-            DrawTubeBackground(g);
-
-            // Draw the phosphor glow
-            DrawPhosphorGlow(g);
-
-            // Draw the scale marks
-            DrawScale(g);
-
-            // Draw glass reflection effect
-            DrawGlassReflection(g);
-        }
-
-        private void DrawTubeBackground(Graphics g)
-        {
-            Rectangle tubeRect = new Rectangle(5, 5, Width - 10, Height - 10);
-
-            // Create gradient for tube glass effect
-            using (LinearGradientBrush brush = new LinearGradientBrush(
-                tubeRect,
-                Color.FromArgb(40, 40, 40),
-                Color.FromArgb(20, 20, 20),
-                LinearGradientMode.Vertical))
+            // Draw coordinate line (thin baseline)
+            using (Pen coordPen = new Pen(Color.FromArgb(100, ForeColor), 1))
             {
-                g.FillRectangle(brush, tubeRect);
-            }
+                g.DrawLine(coordPen, 5, centerY, Width - 5, centerY);
 
-            // Draw tube border
-            using (Pen borderPen = new Pen(Color.FromArgb(60, 60, 60), 1))
-            {
-                g.DrawRectangle(borderPen, tubeRect);
-            }
-        }
-
-        private void DrawPhosphorGlow(Graphics g)
-        {
-            if (_displayLevel <= 0) return;
-
-            Rectangle glowRect = new Rectangle(8, 8, Width - 16, Height - 16);
-            int levelWidth = (int)(glowRect.Width * _displayLevel);
-            int peakWidth = (int)(glowRect.Width * _peakLevel);
-
-            if (levelWidth > 0)
-            {
-                // Main phosphor glow
-                Rectangle levelRect = new Rectangle(glowRect.X, glowRect.Y, levelWidth, glowRect.Height);
-                DrawPhosphorSegment(g, levelRect, _displayLevel);
-            }
-
-            // Draw peak indicator
-            if (peakWidth > 2 && _peakLevel > _displayLevel)
-            {
-                Rectangle peakRect = new Rectangle(
-                    glowRect.X + peakWidth - 2,
-                    glowRect.Y,
-                    3,
-                    glowRect.Height);
-
-                using (SolidBrush peakBrush = new SolidBrush(GetPhosphorColor(1.0f)))
+                // Draw scale marks every 10%
+                for (int i = 0; i <= 20; i++)
                 {
-                    g.FillRectangle(peakBrush, peakRect);
+                    int markX = 5 + (maxLength * i / 20);
+                    g.DrawLine(coordPen, markX, centerY - 3, markX, centerY + 3);
                 }
+            }
 
-                // Peak glow effect
-                using (LinearGradientBrush glowBrush = new LinearGradientBrush(
-                    new Rectangle(peakRect.X - 3, peakRect.Y - 2, peakRect.Width + 6, peakRect.Height + 4),
-                    Color.FromArgb(100, GetPhosphorColor(1.0f)),
-                    Color.Transparent,
-                    LinearGradientMode.Horizontal))
+            // Draw level indicator line centered
+            if (_displayLevel > 0)
+            {
+                int totalLength = (int)(maxLength * _displayLevel);
+                int halfLength = totalLength / 2;
+                using (Pen pen = new Pen(ForeColor, 3))
                 {
-                    g.FillRectangle(glowBrush, new Rectangle(peakRect.X - 3, peakRect.Y - 2, peakRect.Width + 6, peakRect.Height + 4));
+                    g.DrawLine(pen, centerX - halfLength, centerY, centerX + halfLength, centerY);
                 }
             }
         }
 
-        private void DrawPhosphorSegment(Graphics g, Rectangle rect, float intensity)
-        {
-            // Create gradient for phosphor glow
-            Color baseColor = GetPhosphorColor(intensity);
-            Color glowColor = Color.FromArgb(80, baseColor);
-
-            using (LinearGradientBrush brush = new LinearGradientBrush(
-                rect,
-                Color.FromArgb(20, baseColor),
-                baseColor,
-                LinearGradientMode.Vertical))
-            {
-                g.FillRectangle(brush, rect);
-            }
-
-            // Add outer glow
-            Rectangle glowRect = new Rectangle(rect.X - 1, rect.Y - 1, rect.Width + 2, rect.Height + 2);
-            using (LinearGradientBrush glowBrush = new LinearGradientBrush(
-                glowRect,
-                glowColor,
-                Color.Transparent,
-                LinearGradientMode.Vertical))
-            {
-                g.FillRectangle(glowBrush, glowRect);
-            }
-        }
-
-        private Color GetPhosphorColor(float intensity)
-        {
-            // Authentic CRT phosphor green with intensity-based color shift
-            if (intensity < 0.7f)
-            {
-                // Green phosphor (P31)
-                int green = (int)(255 * intensity * 1.2f);
-                int red = (int)(80 * intensity);
-                return Color.FromArgb(red, Math.Min(255, green), red / 2);
-            }
-            else
-            {
-                // Shift to yellow/white for high levels (phosphor saturation effect)
-                float yellowShift = (intensity - 0.7f) / 0.3f;
-                int red = (int)(80 + 175 * yellowShift);
-                int green = 255;
-                int blue = (int)(40 * yellowShift);
-                return Color.FromArgb(red, green, blue);
-            }
-        }
-
-        private void DrawScale(Graphics g)
-        {
-            // Draw scale marks like on vintage VU meters
-            Rectangle scaleRect = new Rectangle(8, Height - 15, Width - 16, 10);
-
-            using (Pen scalePen = new Pen(Color.FromArgb(100, 100, 100), 1))
-            {
-                // Draw major scale marks
-                for (int i = 0; i <= 10; i++)
-                {
-                    int x = scaleRect.X + (scaleRect.Width * i / 10);
-                    g.DrawLine(scalePen, x, scaleRect.Y, x, scaleRect.Y + (i % 5 == 0 ? 6 : 3));
-                }
-            }
-
-            // Draw "VU" label
-            using (Font font = new Font("Arial", 6, FontStyle.Bold))
-            using (SolidBrush textBrush = new SolidBrush(Color.FromArgb(120, 120, 120)))
-            {
-                g.DrawString("VU", font, textBrush, Width - 20, Height - 12);
-            }
-        }
-
-        private void DrawGlassReflection(Graphics g)
-        {
-            // Subtle glass reflection effect
-            Rectangle reflectRect = new Rectangle(5, 5, Width - 10, (Height - 10) / 3);
-
-            using (LinearGradientBrush reflectBrush = new LinearGradientBrush(
-                reflectRect,
-                Color.FromArgb(30, 255, 255, 255),
-                Color.Transparent,
-                LinearGradientMode.Vertical))
-            {
-                g.FillRectangle(reflectBrush, reflectRect);
-            }
-        }
 
         protected override void Dispose(bool disposing)
         {
