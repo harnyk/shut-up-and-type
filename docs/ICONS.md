@@ -44,10 +44,9 @@ The application uses a CI/CD-based icon generation system that creates multiple 
 ### Generation Process
 1. **SVG Processing**: Source SVG is processed with Sharp.js
 2. **PNG Generation**: Multiple PNG files created at all required sizes
-3. **Optimization**: Images optimized with Squoosh CLI and OxiPNG
-4. **ICO Creation**: Multi-resolution ICO files created with ImageMagick
-5. **Validation**: Generated files validated for completeness
-6. **Deployment**: Icons committed back to repository
+3. **ICO Creation**: Multi-resolution ICO files created with png-to-ico package
+4. **Validation**: Generated files validated for completeness
+5. **Deployment**: Icons committed back to repository
 
 ### Outputs
 - `assets/icons/generated/` - PNG files at all resolutions
@@ -157,10 +156,9 @@ Use the PowerShell validation script:
 
 ### CI Tools
 - **Node.js 20**: JavaScript runtime for tools
-- **Sharp CLI**: High-performance image processing
-- **Squoosh CLI**: Image optimization
-- **ImageMagick**: ICO file creation
-- **OxiPNG**: PNG optimization
+- **Sharp**: High-performance image processing library
+- **png-to-ico**: ICO file creation package
+- **fs-extra**: File system utilities
 
 ### Development Tools
 - **PowerShell**: Validation scripts

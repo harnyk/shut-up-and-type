@@ -43,15 +43,13 @@ To manually generate icons locally:
 
 ```bash
 # Install dependencies
-npm install -g svg2png-cli imagemin-cli
+npm install
 
-# Generate PNGs from SVG
-svg2png assets/icons/source/microphone.svg -o assets/icons/generated/ -w 16 -h 16
-svg2png assets/icons/source/microphone.svg -o assets/icons/generated/ -w 32 -h 32
-# ... (repeat for all sizes)
+# Generate all icons (PNGs and ICOs)
+npm run build-icons
 
-# Create ICO file
-magick convert assets/icons/generated/microphone-*.png assets/icons/ico/microphone.ico
+# Alternative: Run the batch script
+.\scripts\generate-icons-local.bat
 ```
 
 ## Best Practices
