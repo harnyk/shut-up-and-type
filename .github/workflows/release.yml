@@ -40,15 +40,17 @@ jobs:
         Set-Content $csprojPath $content
       shell: powershell
 
-    - name: Install ImageMagick
-      run: choco install imagemagick --no-progress -y
-      shell: powershell
+    - name: Setup Node.js for icon generation
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
     - name: Generate icons from SVG
       run: |
         if (Test-Path "assets\icons\source\microphone.svg") {
           echo "🎨 Generating icons from SVG source..."
-          cmd /c "scripts\generate-icons-local.bat"
+          npm install
+          npm run build-icons
           echo "✅ Icons generated successfully"
         } else {
           echo "⚠️ SVG source not found, using existing icons"

@@ -10,5 +10,6 @@ namespace ShutUpAndType.Services
         void Initialize();
         void Show();
         void Hide();
+        void UpdateIcon(bool isRecording);
     }
 }

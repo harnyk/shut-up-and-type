@@ -39,6 +39,16 @@ namespace ShutUpAndType.Services
                 _trayIcon.Visible = false;
         }
 
+        public void UpdateIcon(bool isRecording)
+        {
+            if (_trayIcon != null)
+            {
+                var oldIcon = _trayIcon.Icon;
+                _trayIcon.Icon = IconService.CreateSystemTrayIcon(isRecording);
+                oldIcon?.Dispose();
+            }
+        }
+
         public void Dispose()
         {
             _trayIcon?.Dispose();

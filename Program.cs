@@ -326,6 +326,7 @@ namespace ShutUpAndType
                     statusLabel.ForeColor = Color.Green;
                     vuMeter.Visible = false;
                     cancelButton.Visible = false;
+                    _systemTrayService.UpdateIcon(false);
                     StopProcessingTimeout();
                     break;
                 case ApplicationState.Recording:
@@ -333,6 +334,7 @@ namespace ShutUpAndType
                     statusLabel.ForeColor = Color.Red;
                     vuMeter.Visible = true;
                     cancelButton.Visible = true;
+                    _systemTrayService.UpdateIcon(true);
                     StopProcessingTimeout();
                     break;
                 case ApplicationState.Processing:
@@ -340,6 +342,7 @@ namespace ShutUpAndType
                     statusLabel.ForeColor = Color.Orange;
                     vuMeter.Visible = false;
                     cancelButton.Visible = true;
+                    _systemTrayService.UpdateIcon(false);
                     StartProcessingTimeout();
                     break;
                 case ApplicationState.Transcribing:
@@ -347,17 +350,20 @@ namespace ShutUpAndType
                     statusLabel.ForeColor = Color.Blue;
                     vuMeter.Visible = false;
                     cancelButton.Visible = true;
+                    _systemTrayService.UpdateIcon(false);
                     StopProcessingTimeout();
                     break;
                 case ApplicationState.TranscriptionComplete:
                     // UI already updated in ProcessTranscriptionResult
                     cancelButton.Visible = false;
+                    _systemTrayService.UpdateIcon(false);
                     StopProcessingTimeout();
                     break;
                 case ApplicationState.Error:
                     // Error message set elsewhere
                     vuMeter.Visible = false;
                     cancelButton.Visible = false;
+                    _systemTrayService.UpdateIcon(false);
                     StopProcessingTimeout();
                     break;
             }

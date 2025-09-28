@@ -33,13 +33,30 @@ namespace ShutUpAndType.Services
         /// Creates a system tray icon optimized for small sizes (16x16, 20x20)
         /// Falls back to main icon if tray-specific icon is not available
         /// </summary>
+        /// <param name="isRecording">Whether to use the recording (red) variant</param>
         /// <returns>System tray optimized icon</returns>
-        public static Icon CreateSystemTrayIcon()
+        public static Icon CreateSystemTrayIcon(bool isRecording = false)
         {
             var assembly = Assembly.GetExecutingAssembly();
             var resourceNames = assembly.GetManifestResourceNames();
 
-            // Try to find tray-specific icon first
+            // Try to find recording tray icon first if recording
+            if (isRecording)
+            {
+                var recordingTrayResource = resourceNames.FirstOrDefault(name =>
+                    name.EndsWith(".microphone-recording-tray.ico", StringComparison.OrdinalIgnoreCase));
+
+                if (recordingTrayResource != null)
+                {
+                    using var stream = assembly.GetManifestResourceStream(recordingTrayResource);
+                    if (stream != null)
+                    {
+                        return new Icon(stream);
+                    }
+                }
+            }
+
+            // Try to find normal tray-specific icon
             var trayResource = resourceNames.FirstOrDefault(name =>
                 name.EndsWith(".microphone-tray.ico", StringComparison.OrdinalIgnoreCase));
 

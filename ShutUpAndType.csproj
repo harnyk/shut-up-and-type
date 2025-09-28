@@ -15,7 +15,7 @@
     <Product>ShutUpAndType</Product>
     <Company>Mark Harnyk</Company>
     <Description>Voice recording with automatic transcription</Description>
-    <ApplicationIcon>microphone.ico</ApplicationIcon>
+    <ApplicationIcon>assets\icons\ico\microphone.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,10 +24,13 @@
 
   <ItemGroup>
     <!-- Main application icon -->
-    <EmbeddedResource Include="microphone.ico" />
+    <EmbeddedResource Include="assets\icons\ico\microphone.ico" />
 
     <!-- System tray optimized icon (if available) -->
     <EmbeddedResource Include="assets\icons\ico\microphone-tray.ico" Condition="Exists('assets\icons\ico\microphone-tray.ico')" />
+
+    <!-- Recording system tray icon (if available) -->
+    <EmbeddedResource Include="assets\icons\ico\microphone-recording-tray.ico" Condition="Exists('assets\icons\ico\microphone-recording-tray.ico')" />
   </ItemGroup>
 
 </Project>

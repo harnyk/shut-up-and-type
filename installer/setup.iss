@@ -15,7 +15,7 @@ Name: "autostart"; Description: "Start with Windows"; GroupDescription: "Additio
 
 [Files]
 Source: "..\bin\Release\net8.0-windows\win-x64\publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\microphone.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\assets\icons\ico\microphone.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\microphone.ico"

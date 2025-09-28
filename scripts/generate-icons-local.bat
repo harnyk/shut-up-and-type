@@ -29,10 +29,21 @@ if not exist "assets\icons\ico" mkdir "assets\icons\ico"
 
 echo ℹ️  Generating PNG icons from SVG...
 
-REM Generate all required PNG sizes
+REM Generate all required PNG sizes for normal microphone
 for %%s in (16 20 24 32 40 48 64 96 128 256 512) do (
-    echo Generating %%sx%%s...
+    echo Generating normal microphone %%sx%%s...
     npx sharp --input "assets\icons\source\microphone.svg" --output "assets\icons\generated\microphone-%%sx%%s.png" resize %%s %%s --format png
+)
+
+REM Generate all required PNG sizes for recording microphone (if source exists)
+if exist "assets\icons\source\microphone-recording.svg" (
+    echo ℹ️  Generating recording variant PNG icons...
+    for %%s in (16 20 24 32 40 48 64 96 128 256 512) do (
+        echo Generating recording microphone %%sx%%s...
+        npx sharp --input "assets\icons\source\microphone-recording.svg" --output "assets\icons\generated\microphone-recording-%%sx%%s.png" resize %%s %%s --format png
+    )
+) else (
+    echo ⚠️  Recording SVG not found, skipping recording variant
 )
 
 echo ✅ PNG generation complete!
@@ -51,6 +62,12 @@ if %errorlevel% neq 0 (
 
     REM System tray icon
     magick convert "assets\icons\generated\microphone-16x16.png" "assets\icons\generated\microphone-20x20.png" "assets\icons\generated\microphone-24x24.png" "assets\icons\generated\microphone-32x32.png" "assets\icons\ico\microphone-tray.ico"
+
+    REM Recording system tray icon (if recording PNGs exist)
+    if exist "assets\icons\generated\microphone-recording-16x16.png" (
+        echo Generating recording tray icon...
+        magick convert "assets\icons\generated\microphone-recording-16x16.png" "assets\icons\generated\microphone-recording-20x20.png" "assets\icons\generated\microphone-recording-24x24.png" "assets\icons\generated\microphone-recording-32x32.png" "assets\icons\ico\microphone-recording-tray.ico"
+    )
 
     REM Copy main icon to root
     copy "assets\icons\ico\microphone.ico" "microphone.ico" >nul
