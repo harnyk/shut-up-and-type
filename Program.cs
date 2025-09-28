@@ -20,6 +20,7 @@ namespace ShutUpAndType
         private Label statusLabel = null!;
         private VUMeterControl vuMeter = null!;
         private Button cancelButton = null!;
+        private System.Windows.Forms.Timer? _processingTimeoutTimer;
         private readonly IConfigurationService _configurationService;
         private readonly IAudioRecordingService _audioRecordingService;
         private readonly ITranscriptionService _transcriptionService;
@@ -81,7 +82,24 @@ namespace ShutUpAndType
             _systemTrayService.ExitRequested += (s, e) => Application.Exit();
             _systemTrayService.SettingsRequested += (s, e) => ShowSettings();
 
-            _audioRecordingService.RecordingCompleted += OnRecordingCompleted;
+            _audioRecordingService.RecordingCompleted += (sender, audioFilePath) =>
+            {
+                // Fire and forget async operation to avoid blocking
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await HandleRecordingCompletedAsync(audioFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError("Unhandled exception in HandleRecordingCompletedAsync", ex);
+
+                        // Force error state on UI thread
+                        BeginInvoke(() => ForceErrorState("Unexpected error occurred"));
+                    }
+                });
+            };
             _audioRecordingService.LevelChanged += OnAudioLevelChanged;
             _applicationStateService.StateChanged += OnApplicationStateChanged;
         }
@@ -125,13 +143,30 @@ namespace ShutUpAndType
             }
         }
 
-        private async void OnRecordingCompleted(object? sender, string audioFilePath)
+        private async Task HandleRecordingCompletedAsync(string audioFilePath)
         {
             try
             {
+                // Ensure we're in Processing state first
+                var currentState = _applicationStateService.CurrentState;
+                if (currentState != ApplicationState.Processing)
+                {
+                    LogError($"OnRecordingCompleted called in unexpected state: {currentState}");
+
+                    // Force back to Processing first, then handle normally
+                    if (!_applicationStateService.TryTransitionTo(ApplicationState.Processing))
+                    {
+                        LogError("Failed to transition to Processing state");
+                        ForceErrorState("State management error");
+                        return;
+                    }
+                }
+
+                // Try to transition to Transcribing
                 if (!_applicationStateService.TryTransitionTo(ApplicationState.Transcribing))
                 {
                     LogError("Invalid state transition to Transcribing");
+                    ForceErrorState("Cannot start transcription");
                     return;
                 }
 
@@ -139,26 +174,68 @@ namespace ShutUpAndType
 
                 if (InvokeRequired)
                 {
-                    Invoke(() => ProcessTranscriptionResult(transcriptionResult));
+                    BeginInvoke(() => ProcessTranscriptionResult(transcriptionResult));
                 }
                 else
                 {
                     ProcessTranscriptionResult(transcriptionResult);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // Transcription was cancelled, this is expected
+                LogError("Transcription was cancelled");
+
+                if (InvokeRequired)
+                {
+                    BeginInvoke(() => {
+                        if (_applicationStateService.CurrentState != ApplicationState.Idle)
+                        {
+                            _applicationStateService.ResetToIdle();
+                        }
+                    });
+                }
+                else
+                {
+                    if (_applicationStateService.CurrentState != ApplicationState.Idle)
+                    {
+                        _applicationStateService.ResetToIdle();
+                    }
+                }
+            }
             catch (Exception ex)
             {
                 LogError("Transcription failed", ex);
+                ForceErrorState(ex.Message);
+            }
+        }
 
+        private void ForceErrorState(string errorMessage)
+        {
+            try
+            {
                 _applicationStateService.TryTransitionTo(ApplicationState.Error);
 
                 if (InvokeRequired)
                 {
-                    Invoke(() => UpdateStatusForError(ex.Message));
+                    BeginInvoke(() => UpdateStatusForError(errorMessage));
                 }
                 else
                 {
-                    UpdateStatusForError(ex.Message);
+                    UpdateStatusForError(errorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("Error in ForceErrorState", ex);
+                // Last resort - reset to idle
+                try
+                {
+                    _applicationStateService.ResetToIdle();
+                }
+                catch
+                {
+                    // Give up at this point
                 }
             }
         }
@@ -220,7 +297,7 @@ namespace ShutUpAndType
         {
             if (InvokeRequired)
             {
-                Invoke(() => vuMeter.SetLevel(level));
+                BeginInvoke(() => vuMeter.SetLevel(level));
             }
             else
             {
@@ -232,7 +309,7 @@ namespace ShutUpAndType
         {
             if (InvokeRequired)
             {
-                Invoke(() => UpdateUIForState(newState));
+                BeginInvoke(() => UpdateUIForState(newState));
             }
             else
             {
@@ -249,34 +326,79 @@ namespace ShutUpAndType
                     statusLabel.ForeColor = Color.Green;
                     vuMeter.Visible = false;
                     cancelButton.Visible = false;
+                    StopProcessingTimeout();
                     break;
                 case ApplicationState.Recording:
                     statusLabel.Text = $"Recording... Press {HotkeyHelper.GetDisplayName(_configurationService.Hotkey)} to stop";
                     statusLabel.ForeColor = Color.Red;
                     vuMeter.Visible = true;
                     cancelButton.Visible = true;
+                    StopProcessingTimeout();
                     break;
                 case ApplicationState.Processing:
                     statusLabel.Text = "Processing...";
                     statusLabel.ForeColor = Color.Orange;
                     vuMeter.Visible = false;
                     cancelButton.Visible = true;
+                    StartProcessingTimeout();
                     break;
                 case ApplicationState.Transcribing:
                     statusLabel.Text = "Transcribing...";
                     statusLabel.ForeColor = Color.Blue;
                     vuMeter.Visible = false;
                     cancelButton.Visible = true;
+                    StopProcessingTimeout();
                     break;
                 case ApplicationState.TranscriptionComplete:
                     // UI already updated in ProcessTranscriptionResult
                     cancelButton.Visible = false;
+                    StopProcessingTimeout();
                     break;
                 case ApplicationState.Error:
                     // Error message set elsewhere
                     vuMeter.Visible = false;
                     cancelButton.Visible = false;
+                    StopProcessingTimeout();
                     break;
+            }
+        }
+
+        private void StartProcessingTimeout()
+        {
+            StopProcessingTimeout(); // Stop any existing timer
+
+            _processingTimeoutTimer = new System.Windows.Forms.Timer();
+            _processingTimeoutTimer.Interval = 10000; // 10 seconds timeout
+            _processingTimeoutTimer.Tick += OnProcessingTimeout;
+            _processingTimeoutTimer.Start();
+        }
+
+        private void StopProcessingTimeout()
+        {
+            if (_processingTimeoutTimer != null)
+            {
+                _processingTimeoutTimer.Stop();
+                _processingTimeoutTimer.Dispose();
+                _processingTimeoutTimer = null;
+            }
+        }
+
+        private void OnProcessingTimeout(object? sender, EventArgs e)
+        {
+            try
+            {
+                LogError("Processing state timeout - forcing transition to Error state");
+
+                StopProcessingTimeout();
+
+                if (_applicationStateService.TryTransitionTo(ApplicationState.Error))
+                {
+                    UpdateStatusForError("Processing timeout - please try again");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("Error in processing timeout handler", ex);
             }
         }
 
@@ -414,6 +536,9 @@ namespace ShutUpAndType
         {
             try
             {
+                // Stop timeout timer
+                StopProcessingTimeout();
+
                 // Dispose services in reverse dependency order
                 _applicationStateService?.Dispose();
                 _audioRecordingService?.Dispose();
