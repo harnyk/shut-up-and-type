@@ -4,6 +4,7 @@ namespace ShutUpAndType.Services
     {
         private readonly IConfigurationService _configurationService;
         private readonly HttpClient _httpClient;
+        private CancellationTokenSource? _cancellationTokenSource;
 
         public WhisperTranscriptionService(IConfigurationService configurationService)
         {
@@ -19,9 +20,12 @@ namespace ShutUpAndType.Services
                 throw new InvalidOperationException("No API key configured");
             }
 
+            _cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = _cancellationTokenSource.Token;
+
             try
             {
-                byte[] fileBytes = File.ReadAllBytes(audioFilePath);
+                byte[] fileBytes = await File.ReadAllBytesAsync(audioFilePath, cancellationToken);
 
                 using var form = new MultipartFormDataContent();
                 using var fileContent = new ByteArrayContent(fileBytes);
@@ -41,11 +45,11 @@ namespace ShutUpAndType.Services
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
-                var response = await _httpClient.PostAsync("https://api.openai.com/v1/audio/transcriptions", form);
+                var response = await _httpClient.PostAsync("https://api.openai.com/v1/audio/transcriptions", form, cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var result = await response.Content.ReadAsStringAsync();
+                    var result = await response.Content.ReadAsStringAsync(cancellationToken);
 
                     // Delete the audio file after successful transcription
                     try
@@ -64,18 +68,46 @@ namespace ShutUpAndType.Services
                 }
                 else
                 {
-                    var error = await response.Content.ReadAsStringAsync();
+                    var error = await response.Content.ReadAsStringAsync(cancellationToken);
                     throw new HttpRequestException($"API Error: {response.StatusCode} - {error}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // Clean up the audio file on cancellation
+                try
+                {
+                    if (File.Exists(audioFilePath))
+                    {
+                        File.Delete(audioFilePath);
+                    }
+                }
+                catch
+                {
+                    // Ignore file deletion errors on cancellation
+                }
+                throw;
             }
             catch (Exception ex) when (!(ex is HttpRequestException))
             {
                 throw new InvalidOperationException($"Error transcribing audio: {ex.Message}", ex);
             }
+            finally
+            {
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = null;
+            }
+        }
+
+        public void CancelTranscription()
+        {
+            _cancellationTokenSource?.Cancel();
         }
 
         public void Dispose()
         {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
             _httpClient.Dispose();
         }
     }

@@ -19,6 +19,7 @@ namespace ShutUpAndType
 
         private Label statusLabel = null!;
         private VUMeterControl vuMeter = null!;
+        private Button cancelButton = null!;
         private readonly IConfigurationService _configurationService;
         private readonly IAudioRecordingService _audioRecordingService;
         private readonly ITranscriptionService _transcriptionService;
@@ -247,28 +248,34 @@ namespace ShutUpAndType
                     statusLabel.Text = HotkeyHelper.GetStatusMessage(_configurationService.Hotkey);
                     statusLabel.ForeColor = Color.Green;
                     vuMeter.Visible = false;
+                    cancelButton.Visible = false;
                     break;
                 case ApplicationState.Recording:
-                    statusLabel.Text = "Recording...";
+                    statusLabel.Text = $"Recording... Press {HotkeyHelper.GetDisplayName(_configurationService.Hotkey)} to stop";
                     statusLabel.ForeColor = Color.Red;
                     vuMeter.Visible = true;
+                    cancelButton.Visible = true;
                     break;
                 case ApplicationState.Processing:
                     statusLabel.Text = "Processing...";
                     statusLabel.ForeColor = Color.Orange;
                     vuMeter.Visible = false;
+                    cancelButton.Visible = true;
                     break;
                 case ApplicationState.Transcribing:
                     statusLabel.Text = "Transcribing...";
                     statusLabel.ForeColor = Color.Blue;
                     vuMeter.Visible = false;
+                    cancelButton.Visible = true;
                     break;
                 case ApplicationState.TranscriptionComplete:
                     // UI already updated in ProcessTranscriptionResult
+                    cancelButton.Visible = false;
                     break;
                 case ApplicationState.Error:
                     // Error message set elsewhere
                     vuMeter.Visible = false;
+                    cancelButton.Visible = false;
                     break;
             }
         }
@@ -337,6 +344,7 @@ namespace ShutUpAndType
         {
             this.statusLabel = new Label();
             this.vuMeter = new VUMeterControl();
+            this.cancelButton = new Button();
             this.SuspendLayout();
 
             // Set the application icon
@@ -359,12 +367,24 @@ namespace ShutUpAndType
             this.vuMeter.TabIndex = 1;
             this.vuMeter.Visible = false; // Initially hidden
 
+            // cancelButton
+            this.cancelButton.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            this.cancelButton.Location = new Point(110, 75);
+            this.cancelButton.Name = "cancelButton";
+            this.cancelButton.Size = new Size(80, 25);
+            this.cancelButton.TabIndex = 2;
+            this.cancelButton.Text = "Cancel";
+            this.cancelButton.UseVisualStyleBackColor = true;
+            this.cancelButton.Visible = false; // Initially hidden
+            this.cancelButton.Click += CancelButton_Click;
+
             // MainForm
             this.AutoScaleDimensions = new SizeF(7F, 15F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.ClientSize = new Size(300, 80);
+            this.ClientSize = new Size(300, 110);
             this.Controls.Add(this.statusLabel);
             this.Controls.Add(this.vuMeter);
+            this.Controls.Add(this.cancelButton);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MinimizeBox = false;
             this.MaximizeBox = false;
@@ -529,6 +549,52 @@ namespace ShutUpAndType
             }
 
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+        private void CancelButton_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                var currentState = _applicationStateService.CurrentState;
+
+                switch (currentState)
+                {
+                    case ApplicationState.Recording:
+                        if (_applicationStateService.TryTransitionTo(ApplicationState.Idle))
+                        {
+                            _audioRecordingService.CancelRecording();
+                            HideWindow();
+                        }
+                        break;
+
+                    case ApplicationState.Processing:
+                        if (_applicationStateService.TryTransitionTo(ApplicationState.Idle))
+                        {
+                            // Processing doesn't have async operations to cancel
+                            HideWindow();
+                        }
+                        break;
+
+                    case ApplicationState.Transcribing:
+                        if (_applicationStateService.TryTransitionTo(ApplicationState.Idle))
+                        {
+                            _transcriptionService.CancelTranscription();
+                            HideWindow();
+                        }
+                        break;
+
+                    default:
+                        // For any other state, just hide the window
+                        HideWindow();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("Error in cancel button click", ex);
+                _applicationStateService.TryTransitionTo(ApplicationState.Error);
+                UpdateStatusForError("Cancel failed");
+            }
         }
 
         private void HandleHotkeyPress()

@@ -100,6 +100,8 @@ namespace ShutUpAndType.Services
                 (_, ApplicationState.Error) => true,
                 (ApplicationState.Error, ApplicationState.Idle) => true,
                 (ApplicationState.Recording, ApplicationState.Idle) => true, // Cancel recording
+                (ApplicationState.Processing, ApplicationState.Idle) => true, // Cancel processing
+                (ApplicationState.Transcribing, ApplicationState.Idle) => true, // Cancel transcribing
                 _ => false
             };
         }

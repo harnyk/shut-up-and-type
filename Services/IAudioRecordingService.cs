@@ -6,6 +6,7 @@ namespace ShutUpAndType.Services
         event EventHandler<float>? LevelChanged;
         void StartRecording();
         void StopRecording();
+        void CancelRecording();
         bool IsRecording { get; }
     }
 }

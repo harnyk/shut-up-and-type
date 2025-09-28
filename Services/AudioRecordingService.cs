@@ -112,6 +112,43 @@ namespace ShutUpAndType.Services
             }
         }
 
+        public void CancelRecording()
+        {
+            string? fileToDelete = null;
+
+            lock (_recordingLock)
+            {
+                if (_isDisposed || _waveIn == null)
+                    return; // Already stopped or disposed
+
+                try
+                {
+                    fileToDelete = _currentRecordingFile;
+                    CleanupRecordingResources();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Error canceling recording: {ex.Message}", ex);
+                }
+            }
+
+            // Clean up the file after cancellation
+            if (!string.IsNullOrEmpty(fileToDelete))
+            {
+                try
+                {
+                    if (File.Exists(fileToDelete))
+                    {
+                        File.Delete(fileToDelete);
+                    }
+                }
+                catch
+                {
+                    // Ignore file deletion errors on cancellation
+                }
+            }
+        }
+
         private void OnDataAvailable(object? sender, WaveInEventArgs e)
         {
             lock (_recordingLock)
